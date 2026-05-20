@@ -1,0 +1,92 @@
+import React from 'react';
+import { Head, Link, useForm } from '@inertiajs/react';
+
+export default function Login() {
+    const { data, setData, post, processing, errors } = useForm({
+        email: '',
+        password: '',
+        remember: false,
+    });
+
+    const submit = (e) => {
+        e.preventDefault();
+        post('/login');
+    };
+
+    return (
+        <div className="min-h-screen flex flex-col sm:justify-center items-center pt-6 sm:pt-0 bg-gray-50" dir="rtl">
+            <Head title="تسجيل الدخول" />
+
+            <div className="w-full sm:max-w-md mt-6 px-6 py-8 bg-white shadow-md overflow-hidden sm:rounded-xl">
+                <div className="flex justify-center mb-6">
+                    <h2 className="text-2xl font-bold text-primary-600">تسجيل الدخول - Dr Vet</h2>
+                </div>
+
+                <form onSubmit={submit}>
+                    <div>
+                        <label className="block font-medium text-sm text-gray-700" htmlFor="email">
+                            البريد الإلكتروني
+                        </label>
+                        <input
+                            id="email"
+                            type="email"
+                            name="email"
+                            value={data.email}
+                            className="border-gray-300 focus:border-primary-500 focus:ring-primary-500 rounded-md shadow-sm mt-1 block w-full"
+                            onChange={(e) => setData('email', e.target.value)}
+                            required
+                            autoFocus
+                        />
+                        {errors.email && <div className="text-red-600 mt-2 text-sm">{errors.email}</div>}
+                    </div>
+
+                    <div className="mt-4">
+                        <label className="block font-medium text-sm text-gray-700" htmlFor="password">
+                            كلمة المرور
+                        </label>
+                        <input
+                            id="password"
+                            type="password"
+                            name="password"
+                            value={data.password}
+                            className="border-gray-300 focus:border-primary-500 focus:ring-primary-500 rounded-md shadow-sm mt-1 block w-full"
+                            onChange={(e) => setData('password', e.target.value)}
+                            required
+                        />
+                        {errors.password && <div className="text-red-600 mt-2 text-sm">{errors.password}</div>}
+                    </div>
+
+                    <div className="block mt-4">
+                        <label className="flex items-center">
+                            <input
+                                type="checkbox"
+                                name="remember"
+                                checked={data.remember}
+                                onChange={(e) => setData('remember', e.target.checked)}
+                                className="rounded border-gray-300 text-primary-600 shadow-sm focus:ring-primary-500"
+                            />
+                            <span className="mr-2 text-sm text-gray-600">تذكرني</span>
+                        </label>
+                    </div>
+
+                    <div className="flex items-center justify-between mt-6">
+                        <Link
+                            href="/register"
+                            className="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                        >
+                            ليس لديك حساب؟
+                        </Link>
+
+                        <button
+                            type="submit"
+                            disabled={processing}
+                            className="inline-flex items-center px-4 py-2 bg-primary-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-primary-700 focus:bg-primary-700 active:bg-primary-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition ease-in-out duration-150"
+                        >
+                            دخول
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}
