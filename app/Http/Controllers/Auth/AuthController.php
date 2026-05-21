@@ -25,9 +25,27 @@ class AuthController extends Controller
 
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
             $request->session()->regenerate();
-            if (Auth::user()->role === 'admin') {
+            $user = Auth::user();
+
+            // Admin → admin dashboard
+            if ($user->role === 'admin') {
                 return redirect()->route('admin.dashboard');
             }
+
+            // Provider → check approval status
+            if ($user->role === 'provider') {
+                // Approved (status = 1) and has a company → clinic dashboard
+                if ((int) $user->status === 1) {
+                    $hasCompany = $user->accounts()->whereHas('company')->exists();
+                    if ($hasCompany) {
+                        return redirect()->route('clinic.dashboard');
+                    }
+                }
+                // Pending or no company → pending page
+                return redirect()->route('provider.pending');
+            }
+
+            // Regular user → default dashboard
             return redirect()->intended('dashboard');
         }
 

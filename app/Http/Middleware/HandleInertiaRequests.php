@@ -37,7 +37,7 @@ class HandleInertiaRequests extends Middleware
     {
         $user = $request->user();
         $adminNotifications = [];
-        
+
         if ($user && $user->role === 'admin') {
             // Get database notifications safely
             $dbNotifications = [];
@@ -46,13 +46,13 @@ class HandleInertiaRequests extends Middleware
                     ->orderBy('created_at', 'desc')
                     ->limit(10)
                     ->get()
-                    ->map(function($n) {
+                    ->map(function ($n) {
                         return [
                             'id' => 'db_' . $n->id,
                             'type' => $n->type,
                             'title' => $n->title,
                             'body' => $n->body,
-                            'is_read' => (bool)$n->is_read,
+                            'is_read' => (bool) $n->is_read,
                             'url' => '#',
                             'created_at' => $n->created_at ? $n->created_at->diffForHumans() : 'سابقاً'
                         ];
@@ -61,7 +61,7 @@ class HandleInertiaRequests extends Middleware
 
             // Build dynamic system alerts
             $systemAlerts = [];
-            
+
             // 1. Pending provider registrations
             $pendingProvidersCount = \App\Models\User::where('role', 'provider')->where('status', 0)->count();
             if ($pendingProvidersCount > 0) {
@@ -117,6 +117,24 @@ class HandleInertiaRequests extends Middleware
                 'user' => $user,
                 'notifications' => $adminNotifications,
             ],
+            // Flash messages for success/error toasts
+            'flash' => [
+                'success' => fn() => $request->session()->get('success'),
+                'error' => fn() => $request->session()->get('error'),
+            ],
+            // Global platform settings shared with every page
+            'settings' => function () {
+                if (!\Schema::hasTable('system_settings')) {
+                    return ['platform_name' => 'Dr. VET PLUS', 'platform_logo' => null];
+                }
+                $name = \App\Models\SystemSetting::getValue('platform_name', 'Dr. VET PLUS');
+                $logo = \App\Models\SystemSetting::getValue('platform_logo', null);
+                return [
+                    // Always a plain string — guards against json/array being returned
+                    'platform_name' => is_string($name) && trim($name) !== '' ? trim($name) : 'Dr. VET PLUS',
+                    'platform_logo' => is_string($logo) ? $logo : null,
+                ];
+            },
         ];
     }
 }

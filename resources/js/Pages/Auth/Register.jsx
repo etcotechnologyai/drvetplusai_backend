@@ -1,7 +1,14 @@
 import React from 'react';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 
 export default function Register() {
+    const { settings = {} } = usePage().props || {};
+
+    // Guard: platform_name must be a plain string
+    const pageTitle =
+        typeof settings?.platform_name === 'string' && settings.platform_name.trim()
+            ? settings.platform_name.trim()
+            : 'Dr. VET PLUS';
     const { data, setData, post, processing, errors } = useForm({
         name: '',
         email: '',
@@ -16,11 +23,16 @@ export default function Register() {
 
     return (
         <div className="min-h-screen flex flex-col sm:justify-center items-center pt-6 sm:pt-0 bg-gray-50" dir="rtl">
-            <Head title="تسجيل حساب جديد" />
+            <Head title={`تسجيل حساب جديد - ${pageTitle}`} />
 
             <div className="w-full sm:max-w-md mt-6 px-6 py-8 bg-white shadow-md overflow-hidden sm:rounded-xl">
                 <div className="flex justify-center mb-6">
-                    <h2 className="text-2xl font-bold text-primary-600">حساب جديد - Dr Vet</h2>
+                    {settings?.platform_logo && (
+                        <img src={settings.platform_logo} alt={settings?.platform_name || 'Dr. VET PLUS'} className="h-12 w-auto object-contain mb-4" />
+                    )}
+                </div>
+                <div className="flex justify-center mb-6">
+                    <h2 className="text-2xl font-bold text-primary-600">حساب جديد - {pageTitle}</h2>
                 </div>
 
                 <form onSubmit={submit}>

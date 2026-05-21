@@ -34,7 +34,7 @@ return new class extends Migration {
 
             $table->timestamps();
 
-            $table->index(['consultation_id', 'status'], 'idx_consultation_status');
+            $table->index(['consultation_id', 'status'], 'idx_consultation_calls_status');
             $table->index(['provider_assignment_id', 'scheduled_at'], 'idx_provider_schedule');
         });
     }

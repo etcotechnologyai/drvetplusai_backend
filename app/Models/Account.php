@@ -13,6 +13,11 @@ class Account extends Model
         return $this->hasOne(Company::class);
     }
 
+    public function branches()
+    {
+        return $this->hasMany(Branch::class);
+    }
+
     public function owner()
     {
         return $this->belongsTo(User::class, 'owner_id');

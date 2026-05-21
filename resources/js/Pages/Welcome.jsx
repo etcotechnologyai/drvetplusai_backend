@@ -1,7 +1,15 @@
 import React, { useState } from 'react';
-import { Link, Head } from '@inertiajs/react';
+import { Link, Head, usePage } from '@inertiajs/react';
 
 export default function Welcome({ auth }) {
+    const { settings = {} } = usePage().props || {};
+
+    // Guard: platform_name must be a plain string
+    const pageTitle =
+        typeof settings?.platform_name === 'string' && settings.platform_name.trim()
+            ? settings.platform_name.trim()
+            : 'Dr. VET PLUS';
+
     const [faqOpen, setFaqOpen] = useState({});
 
     const toggleFaq = (index) => {
@@ -15,25 +23,28 @@ export default function Welcome({ auth }) {
 
     return (
         <>
-            <Head>
-                <title>Dr Vet - استشارة بيطرية أونلاين لحيوانك الأليف</title>
-                <meta name="description" content="تواصل مع أفضل الأطباء البيطريين المرخصين واستشرهم أونلاين لحماية ورعاية حيوانك الأليف في أي وقت ومن أي مكان." />
-            </Head>
+            <Head title={`${pageTitle} - استشارة بيطرية أونلاين لحيوانك الأليف`} />
 
             <div className="min-h-screen bg-slate-50 text-slate-800 font-sans selection:bg-emerald-500 selection:text-white" dir="rtl">
-                
+
                 {/* 1. Header Section */}
                 <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100 transition-all duration-300">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                         <div className="flex items-center justify-between h-20">
                             {/* Logo */}
                             <div className="flex items-center gap-2">
-                                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-blue-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
-                                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
-                                    </svg>
-                                </div>
-                                <span className="text-2xl font-bold bg-gradient-to-l from-emerald-700 to-blue-700 bg-clip-text text-transparent">Dr Vet</span>
+                                {settings?.platform_logo ? (
+                                    <img src={settings.platform_logo} alt={pageTitle} className="h-10 w-auto object-contain" />
+                                ) : (
+                                    <>
+                                        <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-blue-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                                            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                                            </svg>
+                                        </div>
+                                        <span className="text-2xl font-bold bg-gradient-to-l from-emerald-700 to-blue-700 bg-clip-text text-transparent">{pageTitle}</span>
+                                    </>
+                                )}
                             </div>
 
                             {/* Nav Links - Desktop */}
@@ -82,7 +93,7 @@ export default function Welcome({ auth }) {
 
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
-                            
+
                             {/* Hero Text */}
                             <div className="lg:col-span-7 text-center lg:text-right">
                                 <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold mb-6">
@@ -93,13 +104,13 @@ export default function Welcome({ auth }) {
                                     رعاية بيطرية فورية متكاملة لحيوانك الأليف
                                 </div>
                                 <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 leading-tight">
-                                    استشارة بيطرية أونلاين <br/>
+                                    استشارة بيطرية أونلاين <br />
                                     <span className="bg-gradient-to-l from-emerald-600 to-blue-600 bg-clip-text text-transparent">لحيوانك في أي وقت</span>
                                 </h1>
                                 <p className="mt-6 text-lg sm:text-xl text-slate-600 leading-relaxed max-w-2xl mx-auto lg:mx-0">
                                     تواصل مع أطباء بيطريين معتمدين، احجز استشارة فورية أو مجدولة بالصوت والصورة، وتابع السجل الطبي لحيوانك الأليف من مكان واحد وبأمان تام.
                                 </p>
-                                
+
                                 <div className="mt-10 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
                                     <Link
                                         href="/register"
@@ -137,7 +148,7 @@ export default function Welcome({ auth }) {
                                 <div className="relative w-80 h-80 sm:w-96 sm:h-96 rounded-3xl bg-gradient-to-tr from-emerald-100 to-blue-50 border border-white shadow-2xl flex items-center justify-center p-6">
                                     {/* Visual Backdrop decoration */}
                                     <div className="absolute inset-0 rounded-3xl border-2 border-dashed border-emerald-300 animate-[spin_60s_linear_infinite] opacity-50 m-2"></div>
-                                    
+
                                     {/* Floating Cards */}
                                     <div className="absolute -top-6 -right-6 bg-white p-4 rounded-2xl shadow-xl border border-slate-100 flex items-center gap-3 animate-bounce">
                                         <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600 font-bold">🩺</div>
@@ -160,7 +171,7 @@ export default function Welcome({ auth }) {
                                         <div className="w-24 h-24 rounded-full bg-emerald-600 flex items-center justify-center text-white text-5xl mx-auto shadow-lg shadow-emerald-500/30 animate-pulse">
                                             🐾
                                         </div>
-                                        <h3 className="mt-6 text-xl font-bold text-slate-900">Dr Vet App</h3>
+                                        <h3 className="mt-6 text-xl font-bold text-slate-900">{pageTitle}</h3>
                                         <p className="text-sm text-slate-500 mt-2 max-w-[200px]">استشارات فورية بلمسة زر عبر الويب والهاتف</p>
                                     </div>
                                 </div>
@@ -174,7 +185,7 @@ export default function Welcome({ auth }) {
                 <section id="how-it-works" className="py-20 bg-white">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                         <div className="text-center max-w-3xl mx-auto">
-                            <h2 className="text-3xl sm:text-4xl font-bold text-slate-950">كيف تعمل منصة Dr Vet؟</h2>
+                            <h2 className="text-3xl sm:text-4xl font-bold text-slate-950">كيف تعمل منصة {pageTitle}؟</h2>
                             <p className="mt-4 text-lg text-slate-600">أربع خطوات بسيطة تفصلك عن الحصول على أفضل رعاية لحيوانك الأليف</p>
                         </div>
 
@@ -236,17 +247,17 @@ export default function Welcome({ auth }) {
                 {/* 5. For Doctors & Clinics */}
                 <section id="providers" className="py-20 bg-gradient-to-r from-emerald-900 to-emerald-950 text-white relative overflow-hidden">
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-emerald-800/40 via-transparent to-transparent"></div>
-                    
+
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-                            
+
                             {/* Description for providers */}
                             <div className="lg:col-span-7">
                                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-800/60 text-emerald-300 text-xs font-bold mb-4 border border-emerald-700">
                                     للأطباء البيطريين وأصحاب العيادات
                                 </span>
                                 <h2 className="text-3xl sm:text-4xl font-bold leading-tight">
-                                    وسّع نطاق عملك وقدّم خدماتك <br/>
+                                    وسّع نطاق عملك وقدّم خدماتك <br />
                                     <span className="text-emerald-400">لآلاف العملاء في منطقتك</span>
                                 </h2>
                                 <p className="mt-6 text-emerald-100 text-base sm:text-lg leading-relaxed max-w-xl">
@@ -326,7 +337,7 @@ export default function Welcome({ auth }) {
                 <section className="py-20 bg-white">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-                            
+
                             {/* Graphic visual side */}
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-4">
@@ -360,7 +371,7 @@ export default function Welcome({ auth }) {
                                 <span className="text-emerald-600 font-bold text-sm tracking-widest uppercase">لماذا تختارنا؟</span>
                                 <h2 className="text-3xl sm:text-4xl font-bold text-slate-950 mt-2">نوفر لحيوانك الأليف الرعاية الطبية التي يستحقها</h2>
                                 <p className="mt-6 text-slate-600 leading-relaxed">
-                                    نهتم في Dr Vet بتقديم تجربة صحية فريدة. لا داعي لنقل حيوانك الأليف وهو مريض أو متألم وتكبد عناء الذهاب للعيادات، يمكنك الآن تشخيص حالته الطارئة والحصول على نصيحة طبية موثقة في بضع دقائق.
+                                    نهتم في {pageTitle} بتقديم تجربة صحية فريدة. لا داعي لنقل حيوانك الأليف وهو مريض أو متألم وتكبد عناء الذهاب للعيادات، يمكنك الآن تشخيص حالته الطارئة والحصول على نصيحة طبية موثقة في بضع دقائق.
                                 </p>
                                 <div className="mt-8 space-y-4">
                                     <div className="flex gap-4">
@@ -395,7 +406,7 @@ export default function Welcome({ auth }) {
                         <div className="mt-12 space-y-4">
                             {[
                                 { q: "هل الاستشارة البيطرية أونلاين بديل كامل للعيادة التقليدية؟", a: "تعتبر الاستشارة أونلاين حلاً مثالياً للحالات البسيطة، الاستفسارات السريعة، المتابعة الطبية، والتوجيه الطارئ. ولكن في الحالات التي تتطلب تدخلات جراحية، أو أشعة، أو تحاليل مخبرية، سيقوم الطبيب بتوجيهك للذهاب إلى أقرب عيادة بيطرية مسجلة بالمنصة." },
-                                { q: "كيف يتم التحقق من موثوقية الأطباء في Dr Vet؟", a: "نقوم بطلب ومراجعة التراخيص الطبية، الهويات الوطنية، وشهادات مزاولة المهنة المعتمدة لكل طبيب قبل تفعيل حسابه وموافقته كطبيب معتمد في المنصة." },
+                                { q: `كيف يتم التحقق من موثوقية الأطباء في ${pageTitle}؟`, a: "نقوم بطلب ومراجعة التراخيص الطبية، الهويات الوطنية، وشهادات مزاولة المهنة المعتمدة لكل طبيب قبل تفعيل حسابه وموافقته كطبيب معتمد في المنصة." },
                                 { q: "هل يمكنني إلغاء موعد الاستشارة أو تعديله؟", a: "نعم، يمكنك إلغاء الموعد أو تعديله بكل يسر وسهولة من لوحة التحكم الخاصة بحسابك، شريطة أن يتم ذلك قبل الموعد بمدة لا تقل عن 3 ساعات للحصول على استرداد كامل." },
                                 { q: "ما هي الأجهزة التي يمكنني استخدامها للبدء بالاستشارة؟", a: "المنصة متوافقة تماماً وتعمل على جميع الهواتف الذكية، الأجهزة اللوحية، وأجهزة الحاسوب الشخصي من خلال المتصفح مباشرة دون الحاجة لتحميل تطبيقات إضافية." }
                             ].map((faq, index) => {
@@ -424,14 +435,20 @@ export default function Welcome({ auth }) {
                 <footer className="bg-slate-900 text-slate-400 pt-16 pb-8 border-t border-slate-800">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-12 pb-12 border-b border-slate-800">
-                            
+
                             {/* Logo & Intro */}
                             <div className="md:col-span-1">
                                 <div className="flex items-center gap-2 text-white">
-                                    <div className="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center">
-                                        <span className="text-white text-base">🐾</span>
-                                    </div>
-                                    <span className="text-xl font-bold tracking-wider">Dr Vet</span>
+                                    {settings?.platform_logo ? (
+                                        <img src={settings.platform_logo} alt={pageTitle} className="h-8 w-auto object-contain" />
+                                    ) : (
+                                        <>
+                                            <div className="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center">
+                                                <span className="text-white text-base">🐾</span>
+                                            </div>
+                                            <span className="text-xl font-bold tracking-wider">{pageTitle}</span>
+                                        </>
+                                    )}
                                 </div>
                                 <p className="mt-4 text-xs sm:text-sm text-slate-400 leading-relaxed">
                                     المنصة الرائدة لربط مربي الحيوانات بأفضل العيادات والأطباء البيطريين لتقديم استشارات رقمية موثوقة وآمنة تماماً.
@@ -471,7 +488,7 @@ export default function Welcome({ auth }) {
 
                         {/* Copyright */}
                         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
-                            <p>© {new Date().getFullYear()} Dr Vet. جميع الحقوق محفوظة.</p>
+                            <p>© {new Date().getFullYear()} {pageTitle}. جميع الحقوق محفوظة.</p>
                             <p>صنع بكل حب لرعاية حيواناتكم 💚</p>
                         </div>
                     </div>

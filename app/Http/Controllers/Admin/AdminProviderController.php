@@ -20,7 +20,7 @@ class AdminProviderController extends Controller
     public function index(Request $request)
     {
         $search = $request->input('search');
-        $status = $request->input('status'); // 'pending' (0), 'active' (1), 'rejected' (2)
+        $status = $request->input('status'); // 'pending', 'active', 'rejected', 'suspended'
 
         $query = User::where('role', 'provider')
             ->with(['providerProfile', 'accounts.company']);
@@ -28,11 +28,11 @@ class AdminProviderController extends Controller
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('full_name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%")
-                  ->orWhere('phone', 'like', "%{$search}%")
-                  ->orWhereHas('accounts.company', function ($cq) use ($search) {
-                      $cq->where('name', 'like', "%{$search}%");
-                  });
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%")
+                    ->orWhereHas('accounts.company', function ($cq) use ($search) {
+                        $cq->where('name', 'like', "%{$search}%");
+                    });
             });
         }
 
@@ -43,6 +43,8 @@ class AdminProviderController extends Controller
                 $query->where('status', 1);
             } elseif ($status === 'rejected') {
                 $query->where('status', 2);
+            } elseif ($status === 'suspended') {
+                $query->where('status', 3);
             }
         }
 
@@ -52,12 +54,32 @@ class AdminProviderController extends Controller
             $type = 'doctor';
             $entityName = 'طبيب بيطري مستقل';
             $city = $u->providerProfile?->city;
+            $services = [
+                'medical' => false,
+                'pharmacy' => false,
+                'laboratory' => false,
+            ];
 
             $account = $u->accounts->first();
             if ($account && $account->company) {
                 $type = 'clinic';
                 $entityName = $account->company->name;
                 $city = $account->company->city;
+                $services = [
+                    'medical' => (bool) $account->company->has_medical_services,
+                    'pharmacy' => (bool) $account->company->has_pharmacy,
+                    'laboratory' => (bool) $account->company->has_lab,
+                ];
+            } else if ($u->providerProfile) {
+                $hasMedicalLicense = License::where('licensable_id', $u->providerProfile->id)
+                    ->where('licensable_type', ProviderProfile::class)
+                    ->where('type', 'medical')
+                    ->exists();
+                $services = [
+                    'medical' => $hasMedicalLicense,
+                    'pharmacy' => false,
+                    'laboratory' => false,
+                ];
             }
 
             return [
@@ -68,8 +90,9 @@ class AdminProviderController extends Controller
                 'type' => $type,
                 'entity_name' => $entityName,
                 'city' => $city,
+                'services' => $services,
                 'status' => (int) $u->status,
-                'created_at' => $u->created_at->format('Y-m-d H:i'),
+                'created_at' => $this->formatDate($u->created_at, 'Y-m-d H:i'),
             ];
         });
 
@@ -78,6 +101,7 @@ class AdminProviderController extends Controller
             'pending' => User::where('role', 'provider')->where('status', 0)->count(),
             'active' => User::where('role', 'provider')->where('status', 1)->count(),
             'rejected' => User::where('role', 'provider')->where('status', 2)->count(),
+            'suspended' => User::where('role', 'provider')->where('status', 3)->count(),
         ];
 
         return Inertia::render('Admin/Providers/Index', [
@@ -124,11 +148,11 @@ class AdminProviderController extends Controller
             $entityName = $company->name;
             $city = $company->city;
             $registration_number = $company->registration_number;
-            
+
             $services = [
-                'medical' => (bool)$company->has_medical_services,
-                'pharmacy' => (bool)$company->has_pharmacy,
-                'laboratory' => (bool)$company->has_lab,
+                'medical' => (bool) $company->has_medical_services,
+                'pharmacy' => (bool) $company->has_pharmacy,
+                'laboratory' => (bool) $company->has_lab,
             ];
 
             // Map licenses
@@ -139,8 +163,8 @@ class AdminProviderController extends Controller
                     'id' => $lic->id,
                     'type' => $lic->type,
                     'number' => $lic->number,
-                    'issued_at' => $lic->issued_at ? $lic->issued_at->format('Y-m-d') : null,
-                    'expires_at' => $lic->expires_at ? $lic->expires_at->format('Y-m-d') : null,
+                    'issued_at' => $this->formatDate($lic->issued_at, 'Y-m-d'),
+                    'expires_at' => $this->formatDate($lic->expires_at, 'Y-m-d'),
                     'file_url' => $filePath ? asset('storage/' . $filePath) : null,
                 ];
             })->toArray();
@@ -159,8 +183,8 @@ class AdminProviderController extends Controller
                     'id' => $lic->id,
                     'type' => $lic->type,
                     'number' => $lic->number,
-                    'issued_at' => $lic->issued_at ? $lic->issued_at->format('Y-m-d') : null,
-                    'expires_at' => $lic->expires_at ? $lic->expires_at->format('Y-m-d') : null,
+                    'issued_at' => $this->formatDate($lic->issued_at, 'Y-m-d'),
+                    'expires_at' => $this->formatDate($lic->expires_at, 'Y-m-d'),
                     'file_url' => $filePath ? asset('storage/' . $filePath) : null,
                 ];
             })->toArray();
@@ -188,7 +212,9 @@ class AdminProviderController extends Controller
             'status' => (int) $user->status,
             'services' => $services,
             'licenses' => $licenses,
-            'created_at' => $user->created_at->format('Y-m-d H:i'),
+            'rejection_reason' => $user->rejection_reason,
+            'approved_at' => $this->formatDate($user->approved_at, 'Y-m-d H:i'),
+            'created_at' => $this->formatDate($user->created_at, 'Y-m-d H:i'),
         ];
 
         return Inertia::render('Admin/Providers/Show', [
@@ -204,8 +230,12 @@ class AdminProviderController extends Controller
         $user = User::findOrFail($id);
 
         DB::transaction(function () use ($user) {
-            // Update User status to 1 (Active)
-            $user->update(['status' => 1]);
+            // Update User status to 1 (Active/Approved)
+            $user->update([
+                'status' => 1,
+                'approved_at' => now(),
+                'rejection_reason' => null
+            ]);
 
             // Update associated Account & Company
             $account = Account::where('owner_id', $user->id)->first();
@@ -231,13 +261,21 @@ class AdminProviderController extends Controller
     /**
      * Reject the provider registration request.
      */
-    public function reject($id)
+    public function reject(Request $request, $id)
     {
+        $request->validate([
+            'rejection_reason' => 'required|string|min:3'
+        ]);
+
         $user = User::findOrFail($id);
 
-        DB::transaction(function () use ($user) {
+        DB::transaction(function () use ($user, $request) {
             // Update User status to 2 (Rejected)
-            $user->update(['status' => 2]);
+            $user->update([
+                'status' => 2,
+                'approved_at' => null,
+                'rejection_reason' => $request->input('rejection_reason')
+            ]);
 
             // Deactivate associated Account & Company
             $account = Account::where('owner_id', $user->id)->first();
@@ -258,5 +296,51 @@ class AdminProviderController extends Controller
         });
 
         return redirect()->back()->with('success', 'تم رفض طلب مقدم الخدمة بنجاح.');
+    }
+
+    /**
+     * Suspend the provider account.
+     */
+    public function suspend($id)
+    {
+        $user = User::findOrFail($id);
+
+        DB::transaction(function () use ($user) {
+            // Update User status to 3 (Suspended)
+            $user->update([
+                'status' => 3
+            ]);
+
+            // Deactivate associated Account & Company
+            $account = Account::where('owner_id', $user->id)->first();
+            if ($account) {
+                $account->update(['is_active' => false]);
+
+                $company = Company::where('account_id', $account->id)->first();
+                if ($company) {
+                    $company->update(['is_active' => false]);
+                }
+            }
+
+            // Deactivate associated ProviderProfile if independent doctor
+            $profile = ProviderProfile::where('user_id', $user->id)->first();
+            if ($profile) {
+                $profile->update(['is_active' => false]);
+            }
+        });
+
+        return redirect()->back()->with('success', 'تم تعليق حساب مقدم الخدمة بنجاح.');
+    }
+
+    /**
+     * Format date safely.
+     */
+    private function formatDate($value, $format = 'Y-m-d')
+    {
+        if (!$value)
+            return null;
+        return $value instanceof \Carbon\Carbon
+            ? $value->format($format)
+            : \Carbon\Carbon::parse($value)->format($format);
     }
 }

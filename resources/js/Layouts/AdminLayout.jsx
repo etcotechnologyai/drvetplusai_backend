@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, usePage } from '@inertiajs/react';
 
 export default function AdminLayout({ children, activePage = 'dashboard' }) {
-    const { auth } = usePage().props;
+    const { auth = { user: null }, settings = {} } = usePage().props || {};
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [userMenuOpen, setUserMenuOpen] = useState(false);
     const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -95,22 +95,32 @@ export default function AdminLayout({ children, activePage = 'dashboard' }) {
 
     return (
         <div className="min-h-screen bg-slate-50 text-slate-800 font-sans flex flex-row-reverse" dir="rtl">
-            
+
             {/* Sidebar Desktop */}
             <aside className={`bg-slate-900 text-slate-200 hidden lg:flex lg:flex-col shadow-xl fixed top-0 bottom-0 right-0 z-20 border-l border-slate-800 transition-all duration-300 ${collapsed ? 'w-20' : 'w-72'}`}>
                 <div className="flex items-center justify-between px-5 h-20 bg-slate-950 border-b border-slate-800">
                     <div className="flex items-center gap-3 overflow-hidden">
-                        <div className="w-10 h-10 min-w-[40px] rounded-xl bg-emerald-550 flex items-center justify-center text-white text-xl font-bold shadow-md shadow-emerald-500/20 bg-gradient-to-tr from-emerald-600 to-teal-500">
-                            🩺
-                        </div>
+                        {settings?.platform_logo ? (
+                            <img src={settings.platform_logo} alt="لوحة التحكم" className="w-10 h-10 object-contain rounded-xl" />
+                        ) : (
+                            <div className="w-10 h-10 min-w-[40px] rounded-xl bg-emerald-550 flex items-center justify-center text-white text-xl font-bold shadow-md shadow-emerald-500/20 bg-gradient-to-tr from-emerald-600 to-teal-500">
+                                🩺
+                            </div>
+                        )}
                         {!collapsed && (
                             <div className="transition-opacity duration-300">
                                 <span className="text-base font-extrabold text-white block whitespace-nowrap">بوابة الإدارة</span>
-                                <span className="text-[10px] text-slate-400 font-bold tracking-wider block">Dr. VET PLUS</span>
+                                {!settings?.platform_logo && (
+                                    <span className="text-[10px] text-slate-400 font-bold tracking-wider block">
+                                        {typeof settings?.platform_name === 'string' && settings.platform_name.trim()
+                                            ? settings.platform_name.trim()
+                                            : 'Dr. VET PLUS'}
+                                    </span>
+                                )}
                             </div>
                         )}
                     </div>
-                    <button 
+                    <button
                         onClick={() => setCollapsed(!collapsed)}
                         className="hidden lg:flex items-center justify-center w-7 h-7 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
                         title={collapsed ? 'توسيع القائمة' : 'طي القائمة'}
@@ -127,13 +137,11 @@ export default function AdminLayout({ children, activePage = 'dashboard' }) {
                                 key={item.id}
                                 href={item.href}
                                 title={collapsed ? item.label : undefined}
-                                className={`flex items-center rounded-xl text-sm font-semibold transition-all duration-200 group ${
-                                    collapsed ? 'justify-center p-3' : 'gap-3.5 px-4 py-3'
-                                } ${
-                                    isActive
+                                className={`flex items-center rounded-xl text-sm font-semibold transition-all duration-200 group ${collapsed ? 'justify-center p-3' : 'gap-3.5 px-4 py-3'
+                                    } ${isActive
                                         ? 'bg-gradient-to-r from-emerald-600 to-teal-650 text-white shadow-md shadow-emerald-650/10'
                                         : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
-                                }`}
+                                    }`}
                             >
                                 <span className={`transition-colors duration-200 ${isActive ? 'text-white' : 'text-slate-500 group-hover:text-emerald-400'}`}>
                                     {item.icon}
@@ -167,16 +175,25 @@ export default function AdminLayout({ children, activePage = 'dashboard' }) {
             {sidebarOpen && (
                 <div className="lg:hidden fixed inset-0 bg-slate-950/50 backdrop-blur-sm z-30" onClick={() => setSidebarOpen(false)} />
             )}
-            
-            <aside className={`w-72 bg-slate-900 text-slate-200 flex flex-col shadow-2xl fixed top-0 bottom-0 right-0 z-40 transition-transform duration-300 transform lg:hidden ${
-                sidebarOpen ? 'translate-x-0' : 'translate-x-full'
-            }`}>
+
+            <aside className={`w-72 bg-slate-900 text-slate-200 flex flex-col shadow-2xl fixed top-0 bottom-0 right-0 z-40 transition-transform duration-300 transform lg:hidden ${sidebarOpen ? 'translate-x-0' : 'translate-x-full'
+                }`}>
                 <div className="flex items-center justify-between px-6 h-20 bg-slate-950 border-b border-slate-800">
                     <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-emerald-600 flex items-center justify-center text-white text-lg font-bold">
-                            🩺
-                        </div>
-                        <span className="text-base font-extrabold text-white">Dr. VET PLUS</span>
+                        {settings?.platform_logo ? (
+                            <img src={settings.platform_logo} alt="لوحة التحكم" className="h-9 w-auto object-contain rounded-xl" />
+                        ) : (
+                            <>
+                                <div className="w-9 h-9 rounded-xl bg-emerald-600 flex items-center justify-center text-white text-lg font-bold">
+                                    🩺
+                                </div>
+                                <span className="text-base font-extrabold text-white">
+                                    {typeof settings?.platform_name === 'string' && settings.platform_name.trim()
+                                        ? settings.platform_name.trim()
+                                        : 'Dr. VET PLUS'}
+                                </span>
+                            </>
+                        )}
                     </div>
                     <button onClick={() => setSidebarOpen(false)} className="text-slate-400 hover:text-white text-xl font-bold p-1">
                         ✕
@@ -190,11 +207,10 @@ export default function AdminLayout({ children, activePage = 'dashboard' }) {
                                 key={item.id}
                                 href={item.href}
                                 onClick={() => setSidebarOpen(false)}
-                                className={`flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
-                                    isActive
-                                        ? 'bg-emerald-600 text-white shadow-md'
-                                        : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
-                                }`}
+                                className={`flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${isActive
+                                    ? 'bg-emerald-600 text-white shadow-md'
+                                    : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
+                                    }`}
                             >
                                 <span className={isActive ? 'text-white' : 'text-slate-500'}>{item.icon}</span>
                                 <span className="flex-1">{item.label}</span>
@@ -206,10 +222,10 @@ export default function AdminLayout({ children, activePage = 'dashboard' }) {
 
             {/* Main Content Area */}
             <div className={`flex-1 flex flex-col min-h-screen overflow-x-hidden transition-all duration-300 ${collapsed ? 'lg:mr-20' : 'lg:mr-72'}`}>
-                
+
                 {/* Topbar */}
                 <nav className="bg-white border-b border-slate-100 shadow-sm sticky top-0 z-10 px-6 sm:px-10 h-20 flex justify-between items-center">
-                    
+
                     {/* Toggle Button Mobile */}
                     <button
                         onClick={() => setSidebarOpen(true)}
@@ -231,7 +247,7 @@ export default function AdminLayout({ children, activePage = 'dashboard' }) {
 
                     {/* Search & Actions */}
                     <div className="flex items-center gap-5 mr-auto">
-                        
+
                         {/* Search Bar */}
                         <div className="relative hidden md:block w-72">
                             <span className="absolute inset-y-0 right-3 flex.5 flex items-center text-slate-400 pointer-events-none">
@@ -248,7 +264,7 @@ export default function AdminLayout({ children, activePage = 'dashboard' }) {
 
                         {/* Notifications */}
                         <div className="relative">
-                            <button 
+                            <button
                                 onClick={() => setNotificationsOpen(!notificationsOpen)}
                                 className="w-10 h-10 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center hover:bg-slate-100 transition-all text-slate-600 hover:text-slate-800 relative outline-none"
                             >
@@ -368,7 +384,12 @@ export default function AdminLayout({ children, activePage = 'dashboard' }) {
 
                 {/* Footer */}
                 <footer className="bg-white border-t border-slate-100 py-6 text-center text-xs text-slate-400 mt-auto">
-                    <p>© {new Date().getFullYear()} Dr. VET PLUS. لوحة الإدارة والتحكم الشاملة. جميع الحقوق محفوظة.</p>
+                    <p>© {new Date().getFullYear()}{' '}
+                        {typeof settings?.platform_name === 'string' && settings.platform_name.trim()
+                            ? settings.platform_name.trim()
+                            : 'Dr. VET PLUS'}.
+                        {' '}لوحة الإدارة والتحكم الشاملة. جميع الحقوق محفوظة.
+                    </p>
                 </footer>
             </div>
 

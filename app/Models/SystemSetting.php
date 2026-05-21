@@ -31,9 +31,20 @@ class SystemSetting extends Model
             $this->attributes['value'] = (string) $value;
         }
     }
-    public static function get($key, $default = null)
+    public static function getValue($key, $default = null)
     {
         $setting = self::where('key', $key)->first();
         return $setting?->value ?? $default;
+    }
+
+    public static function setValue($key, $value, $type = null)
+    {
+        $setting = self::firstOrNew(['key' => $key]);
+        if ($type !== null) {
+            $setting->type = $type;
+        }
+        $setting->value = $value; // goes through setValueAttribute mutator
+        $setting->save();
+        return $setting;
     }
 }

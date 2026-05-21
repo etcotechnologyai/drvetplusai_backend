@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 
 const regionsAndCities = {
     "الرياض": ["الرياض", "الخرج", "الدرعية", "المجمعة", "الدوادمي", "وادي الدواسر", "الزلفي", "شقراء"],
@@ -18,6 +18,14 @@ const regionsAndCities = {
 };
 
 export default function ProviderRegister() {
+    const { settings = {} } = usePage().props || {};
+
+    // Guard: platform_name must be a plain string
+    const pageTitle =
+        typeof settings?.platform_name === 'string' && settings.platform_name.trim()
+            ? settings.platform_name.trim()
+            : 'Dr. VET PLUS';
+
     const [selectedRegion, setSelectedRegion] = useState('');
     const [cities, setCities] = useState([]);
     const [displayPhone, setDisplayPhone] = useState('');
@@ -101,16 +109,22 @@ export default function ProviderRegister() {
 
     return (
         <>
-            <Head title="تسجيل المنشآت البيطرية - Dr. VET PLUS" />
+            <Head title={`تسجيل المنشآت البيطرية - ${pageTitle}`} />
 
             <div className="min-h-screen bg-[#f4fbf7] text-slate-800 font-sans flex flex-col" dir="rtl">
                 {/* Simple Header */}
                 <header className="bg-white border-b border-[#e1efe6] py-4 px-6 sm:px-12 flex justify-between items-center shadow-sm">
                     <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center text-white text-lg font-bold">
-                            🐾
-                        </div>
-                        <span className="text-xl font-bold bg-gradient-to-l from-emerald-800 to-emerald-600 bg-clip-text text-transparent">Dr. VET PLUS</span>
+                        {settings?.platform_logo ? (
+                            <img src={settings.platform_logo} alt={pageTitle} className="h-8 w-auto object-contain" />
+                        ) : (
+                            <>
+                                <div className="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center text-white text-lg font-bold">
+                                    🐾
+                                </div>
+                                <span className="text-xl font-bold bg-gradient-to-l from-emerald-800 to-emerald-600 bg-clip-text text-transparent">{pageTitle}</span>
+                            </>
+                        )}
                     </div>
                     <div className="flex items-center gap-6">
                         <Link href="/" className="text-sm font-semibold text-slate-600 hover:text-emerald-700 transition-colors">الرئيسية</Link>
@@ -122,7 +136,7 @@ export default function ProviderRegister() {
                 <main className="flex-1 flex flex-col justify-center items-center py-12 px-4 sm:px-6 lg:px-8">
                     <div className="max-w-3xl w-full text-center mb-8">
                         <h1 className="text-3xl sm:text-4xl font-extrabold text-emerald-950 tracking-tight">
-                            Dr. VET PLUS
+                            {pageTitle}
                         </h1>
                         <h2 className="text-xl sm:text-2xl font-bold text-emerald-800 mt-2">
                             تسجيل المنشآت البيطرية
@@ -141,7 +155,7 @@ export default function ProviderRegister() {
                         )}
 
                         <form onSubmit={submit} className="space-y-10" encType="multipart/form-data">
-                            
+
                             {/* Section 1: Authorized Person Info */}
                             <div>
                                 <h3 className="text-lg font-bold text-emerald-900 border-r-4 border-emerald-600 pr-3 mb-6">
@@ -435,7 +449,7 @@ export default function ProviderRegister() {
                                         className="mt-1 rounded text-emerald-600 focus:ring-emerald-500 w-5 h-5 border-slate-350"
                                     />
                                     <span className="text-xs sm:text-sm text-slate-655 leading-relaxed">
-                                        أقر بصحة جميع البيانات المدخلة وأوافق على مراجعتها من قبل إدارة منصة Dr. VET PLUS والتحقق من صحة التراخيص المرفقة.
+                                        أقر بصحة جميع البيانات المدخلة وأوافق على مراجعتها من قبل إدارة منصة {pageTitle} والتحقق من صحة التراخيص المرفقة.
                                     </span>
                                 </label>
                             </div>
@@ -457,7 +471,7 @@ export default function ProviderRegister() {
 
                 {/* Simple Footer */}
                 <footer className="bg-white border-t border-[#e1efe6] py-6 text-center text-xs text-slate-500 mt-12">
-                    <p>© {new Date().getFullYear()} Dr. VET PLUS. جميع الحقوق محفوظة.</p>
+                    <p>© {new Date().getFullYear()} {pageTitle}. جميع الحقوق محفوظة.</p>
                 </footer>
             </div>
         </>

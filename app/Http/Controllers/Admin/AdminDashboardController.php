@@ -130,7 +130,7 @@ class AdminDashboardController extends Controller
 
     public function companies()
     {
-        $companies = Company::with(['account.owner'])->get()->map(function ($c) {
+        $companies = Company::where('is_active', true)->with(['account.owner'])->get()->map(function ($c) {
             return [
                 'id' => $c->id,
                 'name' => $c->name,
