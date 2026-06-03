@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Http\Controllers\Admin;
+namespace App\Http\Controllers\Admin\Setting;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use App\Models\SystemSetting;
 
-class AdminSettingsController extends Controller
+class SettingsController
 {
     /**
      * Update all text-based platform settings.
@@ -18,10 +18,10 @@ class AdminSettingsController extends Controller
         $request->validate([
             'platform_name' => 'nullable|string|max:100',
             'platform_logo_url' => 'nullable|url|max:500',
-            'platform_commission' => 'nullable|numeric|min:0|max:100',
-            'min_consultation_fee' => 'nullable|numeric|min:0',
-            'vat_rate' => 'nullable|numeric|min:0|max:100',
-            'min_withdrawal_limit' => 'nullable|numeric|min:0',
+            'consultation_commission_percentage' => 'nullable|numeric|min:0|max:100',
+            'package_commission_percentage' => 'nullable|numeric|min:0|max:100',
+            'vat_percentage' => 'nullable|numeric|min:0|max:100',
+            'min_payout_amount' => 'nullable|numeric|min:0',
         ], [
             'platform_logo_url.url' => 'الرابط الخارجي للشعار يجب أن يكون رابطاً صحيحاً يبدأ بـ http أو https.',
         ]);
@@ -29,10 +29,10 @@ class AdminSettingsController extends Controller
         // Save string/numeric settings
         $textFields = [
             'platform_name' => 'string',
-            'platform_commission' => 'float',
-            'min_consultation_fee' => 'float',
-            'vat_rate' => 'float',
-            'min_withdrawal_limit' => 'float',
+            'consultation_commission_percentage' => 'float',
+            'package_commission_percentage' => 'float',
+            'vat_percentage' => 'float',
+            'min_payout_amount' => 'float',
         ];
 
         foreach ($textFields as $key => $type) {

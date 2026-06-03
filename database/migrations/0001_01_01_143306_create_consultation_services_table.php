@@ -28,7 +28,7 @@ return new class extends Migration {
             $table->boolean('is_active')->default(true)->index();
              
             $table->timestamps();
-            $table->index(['account_id', 'is_active'], 'idx_srv_account_active');
+            $table->index(['account_id', 'is_active'], 'idx_account_active');
         });
     }
 

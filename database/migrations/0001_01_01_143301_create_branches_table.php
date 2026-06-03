@@ -13,21 +13,36 @@ return new class extends Migration {
         Schema::create('branches', function (Blueprint $table) {
             $table->id();
 
-            $table->foreignId('account_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('account_id')
+                ->constrained()
+                ->cascadeOnDelete();
 
             $table->string('name', 150);
 
-            $table->boolean('is_main')->default(false)->index();
+            $table->boolean('is_main')
+                ->default(false)
+                ->index();
 
-            $table->foreignId('activity_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('activity_id')
+                ->nullable()
+                ->constrained()
+                ->nullOnDelete();
 
-            $table->unsignedBigInteger('location_id')->nullable()->index();
+            $table->unsignedBigInteger('location_id')
+                ->nullable()
+                ->index();
 
-            $table->boolean('has_pharmacy')->default(false)->index();
+            $table->boolean('has_pharmacy')
+                ->default(false)
+                ->index();
 
-            $table->boolean('has_lab')->default(false)->index();
+            $table->boolean('has_lab')
+                ->default(false)
+                ->index();
 
-            $table->boolean('is_active')->default(true)->index();
+            $table->boolean('is_active')
+                ->default(true)
+                ->index();
 
             $table->timestamps();
             $table->softDeletes();

@@ -1,9 +1,7 @@
 <?php
 
-namespace App\Http\Controllers\Admin;
+namespace App\Http\Controllers\Admin\Dashboard;
 
-use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Models\User;
 use App\Models\Company;
@@ -14,16 +12,20 @@ use App\Models\Payment;
 use App\Models\ConsultationPackage;
 use App\Models\SystemSetting;
 
-class AdminDashboardController extends Controller
+class DashboardController
 {
     public function index()
     {
         // 1. Gather all platform statistics
         $stats = [
             'total_users' => User::count(),
-            'total_providers' => User::where('role', 'provider')->count(),
+            'total_providers' => ProviderProfile::count(),
             'total_companies' => Company::count(),
-            'pending_approvals' => User::where('role', 'provider')->where('status', 0)->count(),
+            'pending_approvals' => User::where('status', 0)
+                ->whereHas('accounts', function ($q) {
+                    $q->where('type', 'provider');
+                })
+                ->count(),
             'total_doctors' => ProviderProfile::count(),
             'total_pets' => Pet::count(),
             'total_consultations' => Consultation::count(),
@@ -31,8 +33,7 @@ class AdminDashboardController extends Controller
         ];
 
         // 2. Fetch pending provider registration requests
-        $recent_providers = User::where('role', 'provider')
-            ->where('status', 0)
+        $recent_providers = User::where('status', 0)
             ->with(['providerProfile', 'accounts.company'])
             ->orderBy('created_at', 'desc')
             ->limit(5)
@@ -41,14 +42,14 @@ class AdminDashboardController extends Controller
                 $type = 'doctor';
                 $entityName = 'طبيب بيطري';
                 $city = $u->providerProfile?->city;
-                
+
                 $account = $u->accounts->first();
                 if ($account && $account->company) {
                     $type = 'clinic';
                     $entityName = $account->company->name;
-                    $city = $account->company->city;
+                    $city = null;
                 }
-                
+
                 return [
                     'id' => $u->id,
                     'full_name' => $u->full_name,
@@ -62,21 +63,22 @@ class AdminDashboardController extends Controller
             });
 
         // 3. Fetch recent registered users (excluding admins)
-        $recent_users = User::where('role', '!=', 'admin')
-            ->orderBy('created_at', 'desc')
+        $recent_users = User::with(['memberships.role'])
+            ->latest()
             ->limit(5)
             ->get()
             ->map(function ($u) {
+                $role = $u->memberships->first()?->role?->code;
+
                 return [
                     'id' => $u->id,
                     'full_name' => $u->full_name,
                     'email' => $u->email,
-                    'role' => $u->role,
+                    'role' => $role,
                     'status' => $u->status,
                     'created_at' => $u->created_at->format('Y-m-d H:i'),
                 ];
             });
-
         // 4. Fetch recent registered companies with owner relations
         $recent_companies = Company::with(['account'])
             ->orderBy('created_at', 'desc')
@@ -88,7 +90,7 @@ class AdminDashboardController extends Controller
                     'name' => $c->name,
                     'registration_number' => $c->registration_number,
                     'city' => $c->city,
-                    'is_active' => (bool)$c->is_active,
+                    'is_active' => (bool) $c->is_active,
                     'owner_id' => $c->account?->owner_id,
                     'created_at' => $c->created_at ? $c->created_at->format('Y-m-d H:i') : null,
                 ];
@@ -136,7 +138,7 @@ class AdminDashboardController extends Controller
                 'name' => $c->name,
                 'registration_number' => $c->registration_number,
                 'city' => $c->city,
-                'is_active' => (bool)$c->is_active,
+                'is_active' => (bool) $c->is_active,
                 'owner_name' => $c->account?->owner?->full_name ?? 'غير متوفر',
                 'owner_email' => $c->account?->owner?->email ?? 'غير متوفر',
                 'created_at' => $c->created_at ? $c->created_at->format('Y-m-d H:i') : null,
@@ -156,8 +158,6 @@ class AdminDashboardController extends Controller
                 'full_name' => $d->user?->full_name ?? 'غير متوفر',
                 'email' => $d->user?->email ?? 'غير متوفر',
                 'phone' => $d->user?->phone ?? 'غير متوفر',
-                'city' => $d->city,
-                'is_active' => (bool)$d->is_active,
                 'created_at' => $d->created_at ? $d->created_at->format('Y-m-d H:i') : null,
             ];
         });
@@ -169,16 +169,20 @@ class AdminDashboardController extends Controller
 
     public function petOwners()
     {
-        $owners = User::where('role', 'pet_owner')->get()->map(function ($o) {
-            return [
-                'id' => $o->id,
-                'full_name' => $o->full_name,
-                'email' => $o->email,
-                'phone' => $o->phone,
-                'status' => $o->status,
-                'created_at' => $o->created_at->format('Y-m-d H:i'),
-            ];
-        });
+        $owners = User::whereHas('memberships.role', function ($q) {
+            $q->where('code', 'pet_owner');
+        })
+            ->get()
+            ->map(function ($o) {
+                return [
+                    'id' => $o->id,
+                    'full_name' => $o->full_name,
+                    'email' => $o->email,
+                    'phone' => $o->phone,
+                    'status' => $o->status,
+                    'created_at' => $o->created_at?->format('Y-m-d H:i'),
+                ];
+            });
 
         return Inertia::render('Admin/PetOwners/Index', [
             'owners' => $owners
@@ -193,8 +197,10 @@ class AdminDashboardController extends Controller
                 'name' => $p->name,
                 'owner_name' => $p->user?->full_name ?? 'غير متوفر',
                 'owner_email' => $p->user?->email ?? 'غير متوفر',
-                'breed' => $p->breed,
-                'age' => $p->age,
+                'breed' => $p->breed?->name,
+                'age' => $p->birth_date
+                    ? $p->birth_date->age
+                    : null,
                 'created_at' => $p->created_at ? $p->created_at->format('Y-m-d H:i') : null,
             ];
         });
@@ -239,8 +245,9 @@ class AdminDashboardController extends Controller
                 'id' => $pay->id,
                 'amount' => $pay->amount,
                 'status' => $pay->status,
-                'method' => $pay->method,
-                'reference' => $pay->reference,
+                'method' => $pay->payment_method,
+                'reference_type' => $pay->reference_type,
+                'reference_id' => $pay->reference_id,
                 'created_at' => $pay->created_at ? $pay->created_at->format('Y-m-d H:i') : null,
             ];
         });
@@ -255,10 +262,10 @@ class AdminDashboardController extends Controller
         $plans = ConsultationPackage::get()->map(function ($p) {
             return [
                 'id' => $p->id,
-                'name' => $p->name,
+                'title' => $p->title,
                 'description' => $p->description,
                 'price' => $p->price,
-                'consultations_count' => $p->consultations_count,
+                'total_consultations' => $p->total_consultations,
                 'validity_days' => $p->validity_days,
                 'created_at' => $p->created_at ? $p->created_at->format('Y-m-d H:i') : null,
             ];

@@ -2,216 +2,306 @@
 
 namespace App\Http\Controllers\Auth;
 
-use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rules;
-use App\Models\User;
-use App\Models\ProviderProfile;
-use App\Models\Company;
-use App\Models\Account;
 use App\Models\Activity;
-use App\Models\License;
+use App\Models\User;
+use App\Models\Role;
+use App\Models\Account;
+use App\Models\Company;
+use App\Models\Membership;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use App\Services\Media\MediaService;
+use App\Services\License\LicenseService;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
-
-class ProviderRegisteredUserController extends Controller
+use Inertia\Inertia;
+class ProviderRegisteredUserController
 {
-    /**
-     * Display the registration view.
-     */
+
     public function create()
     {
-        return Inertia::render('Auth/ProviderRegister');
+        $activities = Activity::orderBy('name')->get();
+        return Inertia::render('Auth/ProviderRegister', compact('activities'));
     }
-
-    /**
-     * Handle an incoming registration request.
-     */
-    public function store(Request $request)
+    public function store(Request $request, LicenseService $licenseService, MediaService $mediaService)
     {
-        // 1. Normalize Phone Number BEFORE Validation
-        $phone = $request->input('phone');
-        if ($phone) {
-            $phone = preg_replace('/[^\d+]/', '', $phone);
-
-            if (str_starts_with($phone, '+966')) {
-                $phone = substr($phone, 4);
-            } elseif (str_starts_with($phone, '00966')) {
-                $phone = substr($phone, 5);
-            } elseif (str_starts_with($phone, '966')) {
-                $phone = substr($phone, 3);
-            }
-
-            if (str_starts_with($phone, '0')) {
-                $phone = ltrim($phone, '0');
-            }
-
-            $normalizedPhone = '+966' . $phone;
-            $request->merge(['phone' => $normalizedPhone]);
-        }
-
-        // 2. Define Validation Rules
-        $rules = [
-            'provider_type' => 'required|in:doctor,clinic',
-            'full_name' => 'required|string|max:150',
-            'email' => 'required|string|email|max:150|unique:users,email',
-            'phone' => ['required', 'string', 'regex:/^\+9665\d{8}$/', 'unique:users,phone'],
-            'password' => ['required', 'confirmed', Rules\Password::defaults()],
-            'clinic_name' => 'required_if:provider_type,clinic|nullable|string|max:150',
-            'registration_number' => 'required|string|max:100|unique:companies,registration_number',
-            'city' => 'required|string|max:150',
-            'commercial_register_file' => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120',
-            'medical_services' => 'boolean',
-            'pharmacy' => 'boolean',
-            'laboratory' => 'boolean',
-        ];
-
-        // Conditional validation for medical services (Medical License)
-        if ($request->boolean('medical_services')) {
-            $rules['license_number'] = 'required|string|max:100';
-            $rules['license_issue_date'] = 'required|date';
-            $rules['license_expiry_date'] = 'required|date|after:license_issue_date';
-            $rules['medical_license_file'] = 'required|file|mimes:pdf,jpg,jpeg,png|max:5120';
-        }
-
-        $request->validate($rules, [
-            'phone.regex' => 'رقم الجوال يجب أن يكون رقم جوال سعودي صحيح يبدأ بـ 5 ويحتوي على 8 أرقام بعد ذلك.',
-            'registration_number.unique' => 'رقم السجل التجاري مسجل مسبقاً لدينا.',
-            'email.unique' => 'البريد الإلكتروني مسجل مسبقاً لدينا.',
-            'phone.unique' => 'رقم الجوال مسجل مسبقاً لدينا.',
-            'license_expiry_date.after' => 'تاريخ الانتهاء يجب أن يكون بعد تاريخ الإصدار.',
+        $request->merge([
+            'phone' => $this->normalizeSaudiPhone($request->phone),
         ]);
 
-        $commercialRegisterFilePath = null;
-        $medicalLicenseFilePath = null;
+        $request->validate([
+            'owner_name' => [
+                'required',
+                'string',
+                'max:150',
+            ],
 
-        try {
-            DB::beginTransaction();
+            'phone' => [
+                'required',
+                'string',
+                'max:20',
+                'unique:users,phone',
+            ],
 
-            // 1. Create User with pending status (0) and role = provider
+            'email' => [
+                'required',
+                'email',
+                'max:150',
+                'unique:users,email',
+            ],
+            'activity_id' => [
+                'required',
+                'exists:activities,id',
+            ],
+
+            'company_name' => [
+                'required',
+                'string',
+                'max:150',
+            ],
+
+            'legal_name' => [
+                'required',
+                'string',
+                'max:150',
+            ],
+
+            'registration_number' => [
+                'required',
+                'string',
+                'max:100',
+                'unique:companies,registration_number',
+            ],
+            'commercial_issued_at' => [
+                'required',
+                'date',
+            ],
+
+            'commercial_expires_at' => [
+                'required',
+                'date',
+                'after_or_equal:commercial_issued_at',
+            ],
+            'commercial_license_file' => [
+                'required',
+                'file',
+                'mimes:jpg,jpeg,png,pdf',
+                'max:5120',
+            ],
+            'has_medical_services' => [
+                'nullable',
+                'boolean',
+            ],
+
+            'has_pharmacy' => [
+                'nullable',
+                'boolean',
+            ],
+
+            'has_lab' => [
+                'nullable',
+                'boolean',
+            ],
+            'medical_license_number' => [
+                'required_if:has_medical_services,1',
+                'nullable',
+                'string',
+                'max:100',
+                'unique:licenses,number',
+            ],
+
+            'license_issue_date' => [
+                'required_if:has_medical_services,1',
+                'nullable',
+                'date',
+            ],
+
+            'license_expiry_date' => [
+                'required_if:has_medical_services,1',
+                'nullable',
+                'date',
+                'after_or_equal:license_issue_date',
+            ],
+
+            'medical_license_file' => [
+                'required_if:has_medical_services,1',
+                'nullable',
+                'file',
+                'mimes:jpg,jpeg,png,pdf',
+                'max:5120',
+            ],
+
+        ], [
+
+            'activity_id.required' => 'يجب تحديد نوع النشاط.',
+            'activity_id.exists' => 'نوع النشاط المحدد غير صالح.',
+
+
+            'owner_name.required' => 'اسم المفوض مطلوب.',
+            'owner_name.max' => 'اسم المفوض طويل جداً.',
+
+
+            'phone.required' => 'رقم الجوال مطلوب.',
+            'phone.unique' => 'رقم الجوال مستخدم مسبقًا.',
+            'phone.max' => 'رقم الجوال غير صحيح.',
+
+            'email.required' => 'البريد الإلكتروني مطلوب.',
+            'email.email' => 'صيغة البريد الإلكتروني غير صحيحة.',
+            'email.unique' => 'البريد الإلكتروني مستخدم مسبقًا.',
+            'email.max' => 'البريد الإلكتروني طويل جداً.',
+
+
+            'company_name.required' => 'اسم المنشأة مطلوب.',
+            'company_name.max' => 'اسم المنشأة طويل جداً.',
+
+
+            'legal_name.required' => 'الاسم التجاري مطلوب.',
+            'legal_name.max' => 'الاسم التجاري طويل جداً.',
+
+
+            'registration_number.required' => 'رقم السجل التجاري مطلوب.',
+            'registration_number.unique' => 'رقم السجل التجاري مسجل مسبقًا.',
+            'registration_number.max' => 'رقم السجل التجاري غير صحيح.',
+
+
+            'commercial_issued_at.required' => 'تاريخ إصدار السجل التجاري مطلوب.',
+            'commercial_issued_at.date' => 'تاريخ إصدار السجل التجاري غير صحيح.',
+
+            'commercial_expires_at.required' => 'تاريخ انتهاء السجل التجاري مطلوب.',
+            'commercial_expires_at.date' => 'تاريخ انتهاء السجل التجاري غير صحيح.',
+            'commercial_expires_at.after_or_equal' => 'تاريخ انتهاء السجل التجاري يجب أن يكون بعد أو مساويًا لتاريخ الإصدار.',
+
+
+            'commercial_license_file.required' => 'يرجى إرفاق السجل التجاري.',
+            'commercial_license_file.file' => 'ملف السجل التجاري غير صالح.',
+            'commercial_license_file.mimes' => 'صيغة ملف السجل التجاري يجب أن تكون PDF أو JPG أو PNG.',
+            'commercial_license_file.max' => 'حجم ملف السجل التجاري يجب ألا يتجاوز 5 ميجابايت.',
+
+
+            'medical_license_number.required_if' => 'رقم الترخيص الطبي مطلوب.',
+            'medical_license_number.unique' => 'رقم الترخيص الطبي مسجل مسبقًا.',
+            'medical_license_number.max' => 'رقم الترخيص الطبي غير صحيح.',
+
+            'license_issue_date.required_if' => 'تاريخ إصدار الترخيص الطبي مطلوب.',
+            'license_issue_date.date' => 'تاريخ إصدار الترخيص الطبي غير صحيح.',
+
+            'license_expiry_date.required_if' => 'تاريخ انتهاء الترخيص الطبي مطلوب.',
+            'license_expiry_date.date' => 'تاريخ انتهاء الترخيص الطبي غير صحيح.',
+            'license_expiry_date.after_or_equal' => 'تاريخ انتهاء الترخيص الطبي يجب أن يكون بعد أو مساويًا لتاريخ الإصدار.',
+
+
+            'medical_license_file.required_if' => 'يرجى إرفاق الترخيص الطبي.',
+            'medical_license_file.file' => 'ملف الترخيص الطبي غير صالح.',
+            'medical_license_file.mimes' => 'صيغة ملف الترخيص الطبي يجب أن تكون PDF أو JPG أو PNG.',
+            'medical_license_file.max' => 'حجم ملف الترخيص الطبي يجب ألا يتجاوز 5 ميجابايت.',
+
+        ]);
+
+        DB::transaction(function () use ($request, $licenseService, $mediaService) {
+
+
             $user = User::create([
-                'full_name' => $request->full_name,
-                'email' => $request->email,
+                'full_name' => $request->owner_name,
                 'phone' => $request->phone,
-                'password' => Hash::make($request->password),
-                'status' => 0, // Pending
-                'role' => 'provider',
+                'email' => $request->email,
+                'password' => Hash::make('TemporaryPassword@123'),
+                'status' => 0,
             ]);
 
-            // Save Commercial Register File
-            if ($request->hasFile('commercial_register_file')) {
-                $commercialRegisterFilePath = $request->file('commercial_register_file')->store('company-documents', 'public');
-            }
 
-            // Save Medical License File if present
-            if ($request->boolean('medical_services') && $request->hasFile('medical_license_file')) {
-                $medicalLicenseFilePath = $request->file('medical_license_file')->store('licenses', 'public');
-            }
+            $account = Account::create([
+                'name' => $request->company_name,
+                'type' => 'company',
+                'owner_id' => $user->id,
+                'is_active' => true,
+            ]);
 
-            if ($request->provider_type === 'doctor') {
-                $countryId = DB::table('countries')->insertGetId([
-                    'iso_code' => 'SA',
-                    'name' => 'Saudi Arabia',
-                    'phone_code' => '+966',
-                    'created_at' => now(),
-                    'updated_at' => now()
-                ]) ?? DB::table('countries')->first()->id;
+            $company = Company::create([
+                'account_id' => $account->id,
+                'activity_id' => $request->activity_id,
+                'name' => $request->company_name,
+                'legal_name' => $request->legal_name,
+                'registration_number' => $request->registration_number,
+                'has_medical_services' => $request->boolean('has_medical_services'),
+                'has_pharmacy' => $request->boolean('has_pharmacy'),
+                'has_lab' => $request->boolean('has_lab'),
+                'is_active' => false,
+            ]);
 
-                $profile = ProviderProfile::create([
+            $ownerRole = Role::where('code', 'company_owner')->first();
+
+            if ($ownerRole) {
+                Membership::create([
                     'user_id' => $user->id,
-                    'national_id' => '0000000000',
-                    'nationality_id' => $countryId,
-                    'city' => $request->city,
-                ]);
-
-                if ($request->boolean('medical_services')) {
-                    $profile->licenses()->create([
-                        'type' => 'medical',
-                        'number' => $request->license_number,
-                        'issued_at' => $request->license_issue_date,
-                        'expires_at' => $request->license_expiry_date,
-                        'meta' => $medicalLicenseFilePath ? json_encode(['file_path' => $medicalLicenseFilePath]) : null,
-                    ]);
-                }
-            } else {
-                // Clinic setup
-                $account = Account::create([
-                    'name' => $request->clinic_name,
-                    'type' => 'company',
-                    'owner_id' => $user->id,
-                    'is_active' => false,
-                ]);
-
-                $activityId = DB::table('activities')->where('code', 'VET_CLINIC')->first()->id ?? DB::table('activities')->insertGetId([
-                    'code' => 'VET_CLINIC',
-                    'name' => 'Veterinary Clinic',
-                    'is_active' => true,
-                    'created_at' => now(),
-                    'updated_at' => now()
-                ]) ?? DB::table('activities')->first()->id;
-
-                $company = Company::create([
                     'account_id' => $account->id,
-                    'activity_id' => $activityId,
-                    'name' => $request->clinic_name,
-                    'registration_number' => $request->registration_number,
-                    'city' => $request->city,
-                    'is_active' => false,
-                    'has_medical_services' => $request->boolean('medical_services'),
-                    'has_pharmacy' => $request->boolean('pharmacy'),
-                    'has_lab' => $request->boolean('laboratory'),
+                    'role_id' => $ownerRole->id,
+                    'is_active' => true,
                 ]);
-
-                // 1. Create Commercial Register License
-                License::create([
-                    'licensable_id' => $company->id,
-                    'licensable_type' => Company::class,
+            }
+            $commercial = $licenseService->create(
+                $company,
+                [
                     'type' => 'commercial',
+                    'issuer' => 'MOC',
                     'number' => $request->registration_number,
-                    'meta' => $commercialRegisterFilePath ? json_encode(['file_path' => $commercialRegisterFilePath]) : null,
-                ]);
-
-                // 2. Create Medical License (if checked)
-                if ($request->boolean('medical_services')) {
-                    License::create([
-                        'licensable_id' => $company->id,
-                        'licensable_type' => Company::class,
+                    'issued_at' => $request->commercial_issued_at,
+                    'expires_at' => $request->commercial_expires_at,
+                    'status' => 'active',
+                ]
+            );
+            $mediaService->upload(
+                file: $request->file('commercial_license_file'),
+                model: $commercial,
+                usageType: 'commercial_license',
+                isPrimary: false,
+                disk: 'public',
+                altText: 'Commercial License'
+            );
+            if ($request->boolean('has_medical_services')) {
+                $license = $licenseService->create(
+                    $company,
+                    [
                         'type' => 'medical',
-                        'number' => $request->license_number,
-                        'issued_at' => $request->license_issue_date,
-                        'expires_at' => $request->license_expiry_date,
-                        'meta' => $medicalLicenseFilePath ? json_encode(['file_path' => $medicalLicenseFilePath]) : null,
-                    ]);
-                }
+                        'issuer' => 'Medical Authority',
+                        'number' => $request->medical_license_number,
+                        'license_issue_date' => $request->license_issue_date,
+                        'license_expiry_date' => $request->license_expiry_date,
+                        'status' => 'active',
+                    ]
+                );
+                $mediaService->upload(
+                    file: $request->file('medical_license_file'),
+                    model: $license,
+                    usageType: 'medical_license',
+                    isPrimary: false,
+                    disk: 'public',
+                    altText: 'Medical License'
+                );
             }
+        });
 
-            DB::commit();
 
-            return redirect()->route('provider.pending');
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Provider registration failed: ' . $e->getMessage());
-            
-            // Delete uploaded files on failure
-            if ($commercialRegisterFilePath) {
-                Storage::disk('public')->delete($commercialRegisterFilePath);
-            }
-            if ($medicalLicenseFilePath) {
-                Storage::disk('public')->delete($medicalLicenseFilePath);
-            }
-
-            $errorMessage = config('app.debug') 
-                ? 'خطأ في النظام: ' . $e->getMessage() 
-                : 'حدث خطأ أثناء التسجيل. الرجاء المحاولة مرة أخرى.';
-
-            return back()->withErrors(['error' => $errorMessage]);
-        }
+        return redirect()->route('provider.pending');
     }
+    private function normalizeSaudiPhone(?string $phone): ?string
+    {
+        if (!$phone) {
+            return null;
+        }
 
+        $phone = preg_replace('/\D/', '', $phone);
+
+        if (str_starts_with($phone, '0')) {
+            $phone = substr($phone, 1);
+        }
+
+        if (str_starts_with($phone, '966')) {
+            return $phone;
+        }
+
+        return '+966' . $phone;
+    }
     public function pending()
     {
         return Inertia::render('Auth/ProviderPendingApproval');

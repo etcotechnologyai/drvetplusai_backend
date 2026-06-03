@@ -2,42 +2,50 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Database\Factories\UserFactory;
-use Illuminate\Database\Eloquent\Attributes\Fillable;
-use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
-#[Fillable(['name', 'full_name', 'phone', 'email', 'password', 'status', 'role', 'approved_at', 'rejection_reason'])]
-#[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
-    /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, SoftDeletes;
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
-    protected function casts(): array
+    protected $fillable = [
+        'full_name',
+        'phone',
+        'email',
+        'password',
+        'status',
+        'phone_verified_at',
+        'email_verified_at',
+        'last_login_at',
+    ];
+
+    protected $hidden = [
+        'password',
+        'remember_token',
+    ];
+
+    protected $casts = [
+        'phone_verified_at' => 'datetime',
+        'email_verified_at' => 'datetime',
+        'last_login_at' => 'datetime',
+    ];
+    public function memberships()
     {
-        return [
-            'email_verified_at' => 'datetime',
-            'approved_at' => 'datetime',
-            'password' => 'hashed',
-        ];
+        return $this->hasMany(Membership::class);
     }
-
-    public function providerProfile()
-    {
-        return $this->hasOne(ProviderProfile::class);
-    }
-
     public function accounts()
     {
-        return $this->hasMany(Account::class, 'owner_id');
+        return $this->belongsToMany(
+            Account::class,
+            'memberships',
+            'user_id',
+            'account_id'
+        )->withPivot(['role_id', 'is_active',])->withTimestamps();
+    }
+    public function providerProfile()
+    {
+        return $this->hasOne(ProviderProfile::class, 'user_id');
     }
 }

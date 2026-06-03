@@ -13,7 +13,7 @@ class SaudiPayoutMethodsSeeder extends Seeder
      */
     public function run(): void
     {
-        $countryId = Country::where('code', 'SA')->value('id');
+        $countryId = Country::where('iso_code', 'SA')->value('id');
 
         $methods = [
 

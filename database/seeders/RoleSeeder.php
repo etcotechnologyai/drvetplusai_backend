@@ -14,7 +14,9 @@ class RoleSeeder extends Seeder
     {
 
         $roles = [
+            ['name' => 'مدير عام', 'code' => 'super_admin'],
             ['name' => 'مدير نظام', 'code' => 'admin'],
+            ['name' =>"صاحب الشركة",'code'=>'company_owner'],
             ['name' => 'طبيب بيطري', 'code' => 'veterinarian'],
             ['name' => 'موظف', 'code' => 'staff'],
             ['name' => 'عميل', 'code' => 'customer'],

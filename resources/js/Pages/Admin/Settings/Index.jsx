@@ -11,10 +11,22 @@ export default function Index({ settings }) {
     const { data: textData, setData: setTextData, post: postText, processing: textProcessing } = useForm({
         platform_name: getSettingValue('platform_name', 'Dr. VET PLUS'),
         platform_logo_url: '', // optional
-        platform_commission: getSettingValue('platform_commission', '15'),
-        min_consultation_fee: getSettingValue('min_consultation_fee', '50'),
-        vat_rate: getSettingValue('vat_rate', '15'),
-        min_withdrawal_limit: getSettingValue('min_withdrawal_limit', '100'),
+        consultation_commission_percentage: getSettingValue(
+            'consultation_commission_percentage',
+            '5'
+        ),
+        package_commission_percentage: getSettingValue(
+            'package_commission_percentage',
+            '5'
+        ),
+        vat_percentage: getSettingValue(
+            'vat_percentage',
+            '15'
+        ),
+        min_payout_amount: getSettingValue(
+            'min_payout_amount',
+            '100'
+        ),
     });
 
     const { data: logoData, setData: setLogoData, post: postLogo, processing: logoProcessing } = useForm({
@@ -129,17 +141,30 @@ export default function Index({ settings }) {
                                 <label className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block mb-2">عمولة المنصة من الاستشارة (%)</label>
                                 <input
                                     type="number"
-                                    value={textData.platform_commission}
-                                    onChange={e => setTextData('platform_commission', e.target.value)}
+                                    value={textData.consultation_commission_percentage}
+                                    onChange={e =>
+                                        setTextData(
+                                            'consultation_commission_percentage',
+                                            e.target.value
+                                        )
+                                    }
                                     className="w-full bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-xl px-4 py-3 text-sm transition-all outline-none text-slate-800"
                                 />
                             </div>
                             <div>
-                                <label className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block mb-2">الحد الأدنى لرسوم المعاينة (ر.س)</label>
+                                <label className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block mb-2">
+                                    عمولة المنصة من الباقات (%)
+                                </label>
+
                                 <input
                                     type="number"
-                                    value={textData.min_consultation_fee}
-                                    onChange={e => setTextData('min_consultation_fee', e.target.value)}
+                                    value={textData.package_commission_percentage}
+                                    onChange={e =>
+                                        setTextData(
+                                            'package_commission_percentage',
+                                            e.target.value
+                                        )
+                                    }
                                     className="w-full bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-xl px-4 py-3 text-sm transition-all outline-none text-slate-800"
                                 />
                             </div>
@@ -147,20 +172,31 @@ export default function Index({ settings }) {
                                 <label className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block mb-2">الضريبة المضافة (%)</label>
                                 <input
                                     type="number"
-                                    value={textData.vat_rate}
-                                    onChange={e => setTextData('vat_rate', e.target.value)}
+                                    value={textData.vat_percentage}
+                                    onChange={e =>
+                                        setTextData(
+                                            'vat_percentage',
+                                            e.target.value
+                                        )
+                                    }
                                     className="w-full bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-xl px-4 py-3 text-sm transition-all outline-none text-slate-800"
                                 />
                             </div>
                             <div>
-                                <label className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block mb-2">حد السحب (ر.س)</label>
+                                <label className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block mb-2">الحد الأدنى لطلب السحب لمقدمي الخدمات (ر.س)</label>
                                 <input
                                     type="number"
-                                    value={textData.min_withdrawal_limit}
-                                    onChange={e => setTextData('min_withdrawal_limit', e.target.value)}
+                                    value={textData.min_payout_amount}
+                                    onChange={e =>
+                                        setTextData(
+                                            'min_payout_amount',
+                                            e.target.value
+                                        )
+                                    }
                                     className="w-full bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-xl px-4 py-3 text-sm transition-all outline-none text-slate-800"
                                 />
                             </div>
+
                         </div>
 
                         <div className="pt-4 border-t border-slate-100 flex justify-end">

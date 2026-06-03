@@ -2,14 +2,13 @@
 
 namespace App\Http\Controllers\Auth;
 
-use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 
-class AuthController extends Controller
+class AuthController
 {
     public function showLogin()
     {
@@ -26,14 +25,15 @@ class AuthController extends Controller
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
             $request->session()->regenerate();
             $user = Auth::user();
-
+            $account=$user->accounts()->first();
+         
             // Admin → admin dashboard
-            if ($user->role === 'admin') {
+            if ($user->accounts()->where('type', 'system_admin')->exists()) {
                 return redirect()->route('admin.dashboard');
             }
-
+           
             // Provider → check approval status
-            if ($user->role === 'provider') {
+            if ($user->accounts()->where('type', 'provider')->exists()) {
                 // Approved (status = 1) and has a company → clinic dashboard
                 if ((int) $user->status === 1) {
                     $hasCompany = $user->accounts()->whereHas('company')->exists();

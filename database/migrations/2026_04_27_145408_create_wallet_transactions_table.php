@@ -28,7 +28,7 @@ return new class extends Migration {
             $table->timestamps();
 
             $table->index(['wallet_id', 'created_at'], 'idx_wallet_created');
-            $table->index(['reference_type', 'reference_id'], 'idx_wallet_reference');
+            $table->index(['reference_type', 'reference_id'], 'idx_reference');
            
         });
     }

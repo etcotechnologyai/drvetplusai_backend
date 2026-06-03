@@ -12,10 +12,6 @@ export default function Index({ plans }) {
                     <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">الباقات والاشتراكات 🏷️</h2>
                     <p className="text-slate-500 text-sm mt-1.5 font-medium">عرض وإدارة باقات الاستشارات البيطرية المدفوعة مسبقاً وتفاصيل تسعيرها.</p>
                 </div>
-                <button className="px-4.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl text-xs transition-colors shadow-sm flex items-center gap-2">
-                    <span>+</span>
-                    <span>إضافة باقة جديدة</span>
-                </button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">

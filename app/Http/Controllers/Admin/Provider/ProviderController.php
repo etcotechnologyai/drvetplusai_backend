@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Http\Controllers\Admin;
+namespace App\Http\Controllers\Admin\Provider;
 
-use App\Http\Controllers\Controller;
+
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Models\User;
@@ -11,8 +11,9 @@ use App\Models\Account;
 use App\Models\License;
 use Illuminate\Support\Facades\DB;
 use App\Models\ProviderProfile;
+use App\Services\Media\MediaQueryService;
 
-class AdminProviderController extends Controller
+class ProviderController
 {
     /**
      * Display a listing of all provider registration requests.
@@ -22,7 +23,9 @@ class AdminProviderController extends Controller
         $search = $request->input('search');
         $status = $request->input('status'); // 'pending', 'active', 'rejected', 'suspended'
 
-        $query = User::where('role', 'provider')
+        $query = User::whereHas('memberships.role', function ($q) {
+            $q->where('code', 'company_owner');
+        })
             ->with(['providerProfile', 'accounts.company']);
 
         if ($search) {
@@ -53,7 +56,7 @@ class AdminProviderController extends Controller
         $providers = collect($paginator->items())->map(function ($u) {
             $type = 'doctor';
             $entityName = 'طبيب بيطري مستقل';
-            $city = $u->providerProfile?->city;
+            $city = null;
             $services = [
                 'medical' => false,
                 'pharmacy' => false,
@@ -64,7 +67,7 @@ class AdminProviderController extends Controller
             if ($account && $account->company) {
                 $type = 'clinic';
                 $entityName = $account->company->name;
-                $city = $account->company->city;
+                $city = null;
                 $services = [
                     'medical' => (bool) $account->company->has_medical_services,
                     'pharmacy' => (bool) $account->company->has_pharmacy,
@@ -96,12 +99,28 @@ class AdminProviderController extends Controller
             ];
         });
 
+        $providerQuery = User::whereHas('memberships.role', function ($q) {
+            $q->where('code', 'company_owner');
+        });
+
         $counts = [
-            'all' => User::where('role', 'provider')->count(),
-            'pending' => User::where('role', 'provider')->where('status', 0)->count(),
-            'active' => User::where('role', 'provider')->where('status', 1)->count(),
-            'rejected' => User::where('role', 'provider')->where('status', 2)->count(),
-            'suspended' => User::where('role', 'provider')->where('status', 3)->count(),
+            'all' => (clone $providerQuery)->count(),
+
+            'pending' => (clone $providerQuery)
+                ->where('status', 0)
+                ->count(),
+
+            'active' => (clone $providerQuery)
+                ->where('status', 1)
+                ->count(),
+
+            'rejected' => (clone $providerQuery)
+                ->where('status', 2)
+                ->count(),
+
+            'suspended' => (clone $providerQuery)
+                ->where('status', 3)
+                ->count(),
         ];
 
         return Inertia::render('Admin/Providers/Index', [
@@ -124,10 +143,9 @@ class AdminProviderController extends Controller
     /**
      * Display details of a specific provider registration request.
      */
-    public function show($id)
+    public function show($id, MediaQueryService $mediaQueryService)
     {
-        $user = User::where('role', 'provider')
-            ->with(['providerProfile', 'accounts.company.licenses'])
+        $user = User::with(['providerProfile', 'accounts.company.licenses'])
             ->findOrFail($id);
 
         $type = 'doctor';
@@ -156,16 +174,20 @@ class AdminProviderController extends Controller
             ];
 
             // Map licenses
-            $licenses = $company->licenses->map(function ($lic) {
-                $meta = is_string($lic->meta) ? json_decode($lic->meta, true) : $lic->meta;
-                $filePath = $meta['file_path'] ?? null;
+            $licenses = $company->licenses->map(function ($lic) use ($mediaQueryService) {
+                $media = $mediaQueryService->getFirst(
+                    $lic,
+                    $lic->type . '_license'
+                );
                 return [
                     'id' => $lic->id,
                     'type' => $lic->type,
                     'number' => $lic->number,
                     'issued_at' => $this->formatDate($lic->issued_at, 'Y-m-d'),
                     'expires_at' => $this->formatDate($lic->expires_at, 'Y-m-d'),
-                    'file_url' => $filePath ? asset('storage/' . $filePath) : null,
+                    'file_url' => $media
+                        ? asset('storage/' . $media->file_path)
+                        : null,
                 ];
             })->toArray();
         } else if ($user->providerProfile) {
@@ -176,16 +198,17 @@ class AdminProviderController extends Controller
                 ->where('licensable_type', ProviderProfile::class)
                 ->get();
 
-            $licenses = $dbLicenses->map(function ($lic) {
-                $meta = is_string($lic->meta) ? json_decode($lic->meta, true) : $lic->meta;
-                $filePath = $meta['file_path'] ?? null;
+            $licenses = $dbLicenses->map(function ($lic) use ($mediaQueryService) {
+                $media = $mediaQueryService->getPrimary($lic, 'commercial_license');
                 return [
                     'id' => $lic->id,
                     'type' => $lic->type,
                     'number' => $lic->number,
                     'issued_at' => $this->formatDate($lic->issued_at, 'Y-m-d'),
                     'expires_at' => $this->formatDate($lic->expires_at, 'Y-m-d'),
-                    'file_url' => $filePath ? asset('storage/' . $filePath) : null,
+                    'file_url' => $media
+                        ? asset('storage/' . $media->file_path)
+                        : null,
                 ];
             })->toArray();
 

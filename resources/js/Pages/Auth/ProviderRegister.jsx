@@ -1,21 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 
-const regionsAndCities = {
-    "الرياض": ["الرياض", "الخرج", "الدرعية", "المجمعة", "الدوادمي", "وادي الدواسر", "الزلفي", "شقراء"],
-    "مكة المكرمة": ["مكة المكرمة", "جدة", "الطائف", "رابغ", "القنفذة", "الليث", "خليص"],
-    "المدينة المنورة": ["المدينة المنورة", "ينبع", "العلا", "مهد الذهب", "بدر"],
-    "القصيم": ["بريدة", "عنيزة", "الرس", "البكيرية", "المذنب"],
-    "الشرقية": ["الدمام", "الخبر", "الظهران", "الأحساء", "الجبيل", "القطيف", "الخفجي", "حفر الباطن"],
-    "عسير": ["أبها", "خميس مشيط", "أحد رفيدة", "بيشة", "محايل عسير"],
-    "تبوك": ["تبوك", "الوجه", "ضباء", "تيماء", "أملج"],
-    "حائل": ["حائل", "بقعاء", "الشنان"],
-    "الحدود الشمالية": ["عرعر", "رفحاء", "طريف"],
-    "جازان": ["جازان", "صبيا", "أبو عريش", "صامطة"],
-    "نجران": ["نجران", "شرورة"],
-    "الباحة": ["الباحة", "بلجرشي", "المندق"],
-    "الجوف": ["سكاكا", "القريات", "دومة الجندل"]
-};
 
 export default function ProviderRegister() {
     const { settings = {} } = usePage().props || {};
@@ -26,30 +11,32 @@ export default function ProviderRegister() {
             ? settings.platform_name.trim()
             : 'Dr. VET PLUS';
 
-    const [selectedRegion, setSelectedRegion] = useState('');
-    const [cities, setCities] = useState([]);
+    //const [selectedRegion, setSelectedRegion] = useState('');
+    //const [cities, setCities] = useState([]);
     const [displayPhone, setDisplayPhone] = useState('');
-
+    const { activities } = usePage().props;
     const { data, setData, post, processing, errors } = useForm({
         provider_type: 'clinic',
-        full_name: '',
+        activity_id: '',
+        owner_name: '',
         phone: '', // Stored as +9665xxxxxxxx
         email: '',
-        password: '',
-        password_confirmation: '',
+        //password: '',
+        //password_confirmation: '',
         entity_type: 'clinic',
-        clinic_name: '',
-        trade_name: '',
-        registration_number: '', // Maps to registration_number in Controller (Commercial Register)
-        city: '', // Dynamically updated from selected city
-        commercial_register_file: null,
-        medical_services: false,
-        pharmacy: false,
-        laboratory: false,
+        company_name: '',
+        legal_name: '',
+        registration_number: '',
+        commercial_issued_at: '',
+        commercial_expires_at: '',
+        commercial_license_file: null,
+        has_medical_services: false,
+        has_pharmacy: false,
+        has_lab: false,
         agreement: false,
 
-        // Medical License Details (Only populated if medical_services is true)
-        license_number: '', // Medical License Number
+        // Medical License Details (Only populated if has_medical_services is true)
+        medical_license_number: '', // Medical License Number
         license_issue_date: '',
         license_expiry_date: '',
         medical_license_file: null,
@@ -57,16 +44,16 @@ export default function ProviderRegister() {
 
     // Reset medical fields if medical services is unchecked
     useEffect(() => {
-        if (!data.medical_services) {
+        if (!data.has_medical_services) {
             setData((prev) => ({
                 ...prev,
-                license_number: '',
+                medical_license_number: '',
                 license_issue_date: '',
                 license_expiry_date: '',
                 medical_license_file: null
             }));
         }
-    }, [data.medical_services]);
+    }, [data.has_medical_services]);
 
     // Clean and handle phone inputs in real-time
     const handlePhoneChange = (val) => {
@@ -89,7 +76,7 @@ export default function ProviderRegister() {
     };
 
     // Handle Region Selection
-    const handleRegionChange = (e) => {
+    /*const handleRegionChange = (e) => {
         const region = e.target.value;
         setSelectedRegion(region);
         if (region && regionsAndCities[region]) {
@@ -100,11 +87,30 @@ export default function ProviderRegister() {
             setCities([]);
             setData('city', '');
         }
-    };
+    };*/
 
     const submit = (e) => {
         e.preventDefault();
-        post('/register/provider');
+
+        console.log('Submitting', data);
+
+        post('/register/provider', {
+            forceFormData: true,
+
+            onError: (errors) => {
+                console.log('Validation Errors:', errors);
+
+            },
+
+            onSuccess: () => {
+                console.log('Success');
+            },
+
+            onFinish: () => {
+                console.log('Finished');
+            }
+
+        });
     };
 
     return (
@@ -166,13 +172,13 @@ export default function ProviderRegister() {
                                         <label className="block text-xs sm:text-sm font-semibold text-slate-700 mb-1">الاسم الكامل للمفوض <span className="text-red-500">*</span></label>
                                         <input
                                             type="text"
-                                            value={data.full_name}
-                                            onChange={(e) => setData('full_name', e.target.value)}
+                                            value={data.owner_name}
+                                            onChange={(e) => setData('owner_name', e.target.value)}
                                             required
                                             placeholder="الاسم الثلاثي أو الرباعي"
                                             className="w-full rounded-xl border border-slate-200 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 bg-slate-50/50 px-4 py-2.5 text-sm"
                                         />
-                                        {errors.full_name && <p className="text-red-500 text-xs mt-1 font-medium">{errors.full_name}</p>}
+                                        {errors.owner_name && <p className="text-red-500 text-xs mt-1 font-medium">{errors.owner_name}</p>}
                                     </div>
 
                                     <div>
@@ -191,6 +197,7 @@ export default function ProviderRegister() {
                                                 className="w-full border-0 focus:ring-0 bg-transparent px-4 py-2.5 text-sm text-left font-semibold outline-none"
                                             />
                                         </div>
+
                                         {errors.phone && <p className="text-red-500 text-xs mt-1 font-medium">{errors.phone}</p>}
                                     </div>
 
@@ -206,7 +213,7 @@ export default function ProviderRegister() {
                                         />
                                         {errors.email && <p className="text-red-500 text-xs mt-1 font-medium">{errors.email}</p>}
                                     </div>
-
+                                    {/*
                                     <div>
                                         <label className="block text-xs sm:text-sm font-semibold text-slate-700 mb-1">كلمة المرور <span className="text-red-500">*</span></label>
                                         <input
@@ -231,7 +238,7 @@ export default function ProviderRegister() {
                                             className="w-full rounded-xl border border-slate-200 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 bg-slate-50/50 px-4 py-2.5 text-sm"
                                         />
                                         {errors.password_confirmation && <p className="text-red-500 text-xs mt-1 font-medium">{errors.password_confirmation}</p>}
-                                    </div>
+                                    </div>*/}
                                 </div>
                             </div>
 
@@ -243,45 +250,41 @@ export default function ProviderRegister() {
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                     <div>
                                         <label className="block text-xs sm:text-sm font-semibold text-slate-700 mb-1">نوع المنشأة <span className="text-red-500">*</span></label>
+
                                         <select
-                                            value={data.entity_type}
-                                            onChange={(e) => setData('entity_type', e.target.value)}
-                                            className="w-full rounded-xl border border-slate-200 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 bg-slate-50/50 px-4 py-2.5 text-sm text-slate-750"
+                                            value={data.activity_id}
+                                            onChange={(e) => setData('activity_id', e.target.value)}
                                         >
-                                            <option value="clinic">عيادة بيطرية</option>
-                                            <option value="hospital">مستشفى بيطري</option>
-                                            <option value="pharmacy">صيدلية بيطرية</option>
-                                            <option value="lab">مختبر</option>
-                                            <option value="grooming">مركز رعاية/تجميل</option>
+                                            <option value="">اختر نوع النشاط</option>
+                                            {activities.map(activity => (
+                                                <option key={activity.id} value={activity.id}>
+                                                    {activity.name}
+                                                </option>
+                                            ))}
                                         </select>
+                                        {errors.activity_id && (
+                                            <p className="text-red-500 text-sm">
+                                                {errors.activity_id}
+                                            </p>
+                                        )}
                                     </div>
 
                                     <div>
                                         <label className="block text-xs sm:text-sm font-semibold text-slate-700 mb-1">اسم المنشأة <span className="text-red-500">*</span></label>
                                         <input
                                             type="text"
-                                            value={data.clinic_name}
-                                            onChange={(e) => setData('clinic_name', e.target.value)}
+                                            value={data.company_name}
+                                            onChange={(e) => setData('company_name', e.target.value)}
                                             required
                                             placeholder="الاسم الرسمي للمنشأة"
                                             className="w-full rounded-xl border border-slate-200 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 bg-slate-50/50 px-4 py-2.5 text-sm"
                                         />
-                                        {errors.clinic_name && <p className="text-red-500 text-xs mt-1 font-medium">{errors.clinic_name}</p>}
+                                        {errors.company_name && <p className="text-red-500 text-xs mt-1 font-medium">{errors.company_name}</p>}
                                     </div>
 
-                                    <div>
-                                        <label className="block text-xs sm:text-sm font-semibold text-slate-700 mb-1">الاسم التجاري للمنشأة</label>
-                                        <input
-                                            type="text"
-                                            value={data.trade_name}
-                                            onChange={(e) => setData('trade_name', e.target.value)}
-                                            placeholder="الاسم التجاري إن وجد"
-                                            className="w-full rounded-xl border border-slate-200 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 bg-slate-50/50 px-4 py-2.5 text-sm"
-                                        />
-                                        {errors.trade_name && <p className="text-red-500 text-xs mt-1 font-medium">{errors.trade_name}</p>}
-                                    </div>
 
-                                    <div className="grid grid-cols-2 gap-4">
+
+                                    {/* <div className="grid grid-cols-2 gap-4">
                                         <div>
                                             <label className="block text-xs sm:text-sm font-semibold text-slate-700 mb-1">المنطقة <span className="text-red-500">*</span></label>
                                             <select
@@ -312,8 +315,26 @@ export default function ProviderRegister() {
                                                 ))}
                                             </select>
                                         </div>
-                                    </div>
+                                    </div>*/}
 
+                                </div>
+                            </div>
+                            <div className="transition-all duration-300 ease-in-out border border-[#e1efe6] bg-[#fdfefe] p-6 rounded-2xl">
+                                <h3 className="text-lg font-bold text-emerald-950 border-r-4 border-emerald-500 pr-3 mb-6">
+                                    بيانات السجل التجاري
+                                </h3>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                    <div>
+                                        <label className="block text-xs sm:text-sm font-semibold text-slate-700 mb-1">الاسم التجاري للمنشأة</label>
+                                        <input
+                                            type="text"
+                                            value={data.legal_name}
+                                            onChange={(e) => setData('legal_name', e.target.value)}
+                                            placeholder="الاسم التجاري"
+                                            className="w-full rounded-xl border border-slate-200 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 bg-slate-50/50 px-4 py-2.5 text-sm"
+                                        />
+                                        {errors.legal_name && <p className="text-red-500 text-xs mt-1 font-medium">{errors.legal_name}</p>}
+                                    </div>
                                     <div>
                                         <label className="block text-xs sm:text-sm font-semibold text-slate-700 mb-1">رقم السجل التجاري <span className="text-red-500">*</span></label>
                                         <input
@@ -326,21 +347,48 @@ export default function ProviderRegister() {
                                         />
                                         {errors.registration_number && <p className="text-red-500 text-xs mt-1 font-medium">{errors.registration_number}</p>}
                                     </div>
+                                    <div>
+                                        <label>تاريخ إصدار السجل التجاري *</label>
+                                        <input
+                                            type="date"
+                                            value={data.commercial_issued_at}
+                                            onChange={(e) => setData('commercial_issued_at', e.target.value)}
+                                            className="w-full rounded-xl ..."
+                                        />
+                                        {errors.commercial_issued_at && (
+                                            <p className="text-red-500 text-xs mt-1 font-medium">
+                                                {errors.commercial_issued_at}
+                                            </p>
+                                        )}
+                                    </div>
 
+                                    <div>
+                                        <label>تاريخ انتهاء السجل التجاري *</label>
+                                        <input
+                                            type="date"
+                                            value={data.commercial_expires_at}
+                                            onChange={(e) => setData('commercial_expires_at', e.target.value)}
+                                            className="w-full rounded-xl ..."
+                                        />
+                                        {errors.commercial_expires_at && (
+                                            <p className="text-red-500 text-xs mt-1 font-medium">
+                                                {errors.commercial_expires_at}
+                                            </p>
+                                        )}
+                                    </div>
                                     <div>
                                         <label className="block text-xs sm:text-sm font-semibold text-slate-700 mb-1">ملف السجل التجاري (PDF/صورة) <span className="text-red-500">*</span></label>
                                         <input
                                             type="file"
                                             required
-                                            onChange={(e) => setData('commercial_register_file', e.target.files[0])}
+                                            onChange={(e) => setData('commercial_license_file', e.target.files[0])}
                                             accept=".pdf,.jpg,.jpeg,.png"
                                             className="w-full file:ml-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 text-slate-550 border border-slate-200 rounded-xl bg-slate-50/50 text-sm focus:outline-none"
                                         />
-                                        {errors.commercial_register_file && <p className="text-red-500 text-xs mt-1 font-medium">{errors.commercial_register_file}</p>}
+                                        {errors.commercial_license_file && <p className="text-red-500 text-xs mt-1 font-medium">{errors.commercial_license_file}</p>}
                                     </div>
                                 </div>
                             </div>
-
                             {/* Section 3: Services Provided */}
                             <div>
                                 <h3 className="text-lg font-bold text-emerald-900 border-r-4 border-emerald-600 pr-3 mb-6">
@@ -350,8 +398,8 @@ export default function ProviderRegister() {
                                     <label className="flex items-center gap-3 p-4 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 cursor-pointer select-none">
                                         <input
                                             type="checkbox"
-                                            checked={data.medical_services}
-                                            onChange={(e) => setData('medical_services', e.target.checked)}
+                                            checked={data.has_medical_services}
+                                            onChange={(e) => setData('has_medical_services', e.target.checked)}
                                             className="rounded text-emerald-600 focus:ring-emerald-500 w-5 h-5 border-slate-350"
                                         />
                                         <span className="text-sm font-medium text-slate-800">خدمات طبية</span>
@@ -360,8 +408,8 @@ export default function ProviderRegister() {
                                     <label className="flex items-center gap-3 p-4 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 cursor-pointer select-none">
                                         <input
                                             type="checkbox"
-                                            checked={data.pharmacy}
-                                            onChange={(e) => setData('pharmacy', e.target.checked)}
+                                            checked={data.has_pharmacy}
+                                            onChange={(e) => setData('has_pharmacy', e.target.checked)}
                                             className="rounded text-emerald-600 focus:ring-emerald-500 w-5 h-5 border-slate-350"
                                         />
                                         <span className="text-sm font-medium text-slate-800">صيدلية</span>
@@ -370,8 +418,8 @@ export default function ProviderRegister() {
                                     <label className="flex items-center gap-3 p-4 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 cursor-pointer select-none">
                                         <input
                                             type="checkbox"
-                                            checked={data.laboratory}
-                                            onChange={(e) => setData('laboratory', e.target.checked)}
+                                            checked={data.has_lab}
+                                            onChange={(e) => setData('has_lab', e.target.checked)}
                                             className="rounded text-emerald-600 focus:ring-emerald-500 w-5 h-5 border-slate-350"
                                         />
                                         <span className="text-sm font-medium text-slate-800">مختبر</span>
@@ -379,8 +427,8 @@ export default function ProviderRegister() {
                                 </div>
                             </div>
 
-                            {/* Section 3.5: Medical License Fields (Only displayed if medical_services is selected) */}
-                            {data.medical_services && (
+                            {/* Section 3.5: Medical License Fields (Only displayed if has_medical_services is selected) */}
+                            {data.has_medical_services && (
                                 <div className="transition-all duration-300 ease-in-out border border-[#e1efe6] bg-[#fdfefe] p-6 rounded-2xl">
                                     <h3 className="text-lg font-bold text-emerald-950 border-r-4 border-emerald-500 pr-3 mb-6">
                                         بيانات الترخيص الطبي
@@ -390,26 +438,16 @@ export default function ProviderRegister() {
                                             <label className="block text-xs sm:text-sm font-semibold text-slate-700 mb-1">رقم الترخيص الطبي <span className="text-red-500">*</span></label>
                                             <input
                                                 type="text"
-                                                value={data.license_number}
-                                                onChange={(e) => setData('license_number', e.target.value)}
+                                                value={data.medical_license_number}
+                                                onChange={(e) => setData('medical_license_number', e.target.value)}
                                                 required
                                                 placeholder="أدخل رقم الترخيص الطبي"
                                                 className="w-full rounded-xl border border-slate-200 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 bg-slate-50/50 px-4 py-2.5 text-sm"
                                             />
-                                            {errors.license_number && <p className="text-red-500 text-xs mt-1 font-medium">{errors.license_number}</p>}
+                                            {errors.medical_license_number && <p className="text-red-500 text-xs mt-1 font-medium">{errors.medical_license_number}</p>}
                                         </div>
 
-                                        <div>
-                                            <label className="block text-xs sm:text-sm font-semibold text-slate-700 mb-1">ملف الترخيص الطبي (PDF/صورة) <span className="text-red-500">*</span></label>
-                                            <input
-                                                type="file"
-                                                required
-                                                onChange={(e) => setData('medical_license_file', e.target.files[0])}
-                                                accept=".pdf,.jpg,.jpeg,.png"
-                                                className="w-full file:ml-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 text-slate-550 border border-slate-200 rounded-xl bg-slate-50/50 text-sm focus:outline-none"
-                                            />
-                                            {errors.medical_license_file && <p className="text-red-500 text-xs mt-1 font-medium">{errors.medical_license_file}</p>}
-                                        </div>
+
 
                                         <div>
                                             <label className="block text-xs sm:text-sm font-semibold text-slate-700 mb-1">تاريخ الإصدار <span className="text-red-500">*</span></label>
@@ -434,6 +472,17 @@ export default function ProviderRegister() {
                                             />
                                             {errors.license_expiry_date && <p className="text-red-500 text-xs mt-1 font-medium">{errors.license_expiry_date}</p>}
                                         </div>
+                                        <div>
+                                            <label className="block text-xs sm:text-sm font-semibold text-slate-700 mb-1">ملف الترخيص الطبي (PDF/صورة) <span className="text-red-500">*</span></label>
+                                            <input
+                                                type="file"
+                                                required
+                                                onChange={(e) => setData('medical_license_file', e.target.files[0])}
+                                                accept=".pdf,.jpg,.jpeg,.png"
+                                                className="w-full file:ml-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 text-slate-550 border border-slate-200 rounded-xl bg-slate-50/50 text-sm focus:outline-none"
+                                            />
+                                            {errors.medical_license_file && <p className="text-red-500 text-xs mt-1 font-medium">{errors.medical_license_file}</p>}
+                                        </div>
                                     </div>
                                 </div>
                             )}
@@ -448,6 +497,11 @@ export default function ProviderRegister() {
                                         required
                                         className="mt-1 rounded text-emerald-600 focus:ring-emerald-500 w-5 h-5 border-slate-350"
                                     />
+                                    {errors.agreement && (
+                                        <p className="text-red-500 text-xs mt-2 font-medium">
+                                            {errors.agreement}
+                                        </p>
+                                    )}
                                     <span className="text-xs sm:text-sm text-slate-655 leading-relaxed">
                                         أقر بصحة جميع البيانات المدخلة وأوافق على مراجعتها من قبل إدارة منصة {pageTitle} والتحقق من صحة التراخيص المرفقة.
                                     </span>

@@ -67,7 +67,7 @@ export default function Welcome({ auth }) {
                                     </Link>
                                 ) : (
                                     <>
-                                        <Link
+                                        {/*<Link
                                             href="/login"
                                             className="text-sm font-bold text-slate-700 hover:text-emerald-600 px-4 py-2 transition-colors"
                                         >
@@ -78,7 +78,7 @@ export default function Welcome({ auth }) {
                                             className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-slate-900 to-slate-800 hover:from-black hover:to-slate-950 text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all duration-200"
                                         >
                                             إنشاء حساب
-                                        </Link>
+                                        </Link>*/}
                                     </>
                                 )}
                             </div>

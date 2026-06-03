@@ -14,12 +14,17 @@ class AdminMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (!Auth::check()) {
+         $user = auth()->user();
+
+        if (!$user) {
             return redirect()->route('login');
         }
-
-        if (Auth::user()->role !== 'admin') {
-            abort(403, 'غير مصرح لك بالدخول إلى هذه الصفحة.');
+        if (
+            !$user->memberships()
+                ->whereHas('role', fn($q) => $q->where('code', 'super_admin'))
+                ->exists()
+        ) {
+            abort(403);
         }
 
         return $next($request);
